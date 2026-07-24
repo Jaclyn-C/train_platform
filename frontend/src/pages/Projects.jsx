@@ -110,7 +110,10 @@ export default function Projects() {
                     {p.name.charAt(0)}
                   </div>
                   <div>
-                    <div className="p-name">{p.name}</div>
+                    <div className="p-name">
+                      {p.name}
+                      {p.is_personal && <span className="tag" style={{ background: '#e6f7ff', color: '#1890ff', marginLeft: 6 }}>个人共享</span>}
+                    </div>
                     <div className="p-date">
                       创建于 {p.created_at.slice(0, 10)}
                       {teamFilter === 'all' && <span style={{ display: 'block', fontSize: 10, color: '#bfbfbf', marginTop: 2 }}>{teamName}</span>}
