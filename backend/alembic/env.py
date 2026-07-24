@@ -16,6 +16,8 @@ from app.models.project import Project  # noqa: F401
 from app.models.team import Team  # noqa: F401
 from app.models.team_member import TeamMember  # noqa: F401
 from app.models.dataset import Dataset  # noqa: F401
+from app.models.label import Label  # noqa: F401
+from app.models.annotation import Annotation  # noqa: F401
 
 target_metadata = SQLModel.metadata
 

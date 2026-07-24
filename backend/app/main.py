@@ -5,11 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import engine
 from sqlmodel import SQLModel
-from app.api import auth, projects, teams, datasets
+from app.api import auth, projects, teams, datasets, labels, annotations
 
 # Import all models so SQLModel.metadata knows about them
 from app.models import user, project, team, team_member  # noqa: F401
 from app.models.dataset import Dataset  # noqa: F401
+from app.models.label import Label  # noqa: F401
+from app.models.annotation import Annotation  # noqa: F401
 
 settings = get_settings()
 
@@ -47,6 +49,8 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(teams.router, prefix="/api")
 app.include_router(datasets.router, prefix="/api")
+app.include_router(labels.router, prefix="/api")
+app.include_router(annotations.router, prefix="/api")
 
 
 @app.get("/api/health")

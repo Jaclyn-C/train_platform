@@ -10,6 +10,7 @@ import Dashboard from '@/pages/Dashboard'
 import MyProjects from '@/pages/MyProjects'
 import Projects from '@/pages/Projects'
 import DataCenter from '@/pages/DataCenter'
+import Annotation from '@/pages/Annotation'
 import NotFound from '@/pages/NotFound'
 
 const queryClient = new QueryClient({
@@ -69,7 +70,7 @@ function AppRoutes() {
         }
       >
         <Route path="data-center" element={<DataCenter />} />
-        <Route path="annotation" element={<div>数据标注 — 开发中</div>} />
+        <Route path="annotation" element={<Annotation />} />
         <Route path="training" element={<div>模型训练 — 开发中</div>} />
         <Route path="evaluation" element={<div>模型评估 — 开发中</div>} />
         <Route path="trial" element={<div>模型试用 — 开发中</div>} />
