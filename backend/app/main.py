@@ -5,10 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.database import engine
 from sqlmodel import SQLModel
-from app.api import auth, projects, teams
+from app.api import auth, projects, teams, datasets
 
 # Import all models so SQLModel.metadata knows about them
 from app.models import user, project, team, team_member  # noqa: F401
+from app.models.dataset import Dataset  # noqa: F401
 
 settings = get_settings()
 
@@ -45,6 +46,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(teams.router, prefix="/api")
+app.include_router(datasets.router, prefix="/api")
 
 
 @app.get("/api/health")
