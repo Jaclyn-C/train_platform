@@ -15,10 +15,16 @@ export const datasetApi = {
     }).then((r) => r.data)
   },
 
-  process(datasetId, action) {
-    const form = new FormData()
-    form.append('action', action)
-    return apiClient.post(`/datasets/${datasetId}/process`, form).then((r) => r.data)
+  process(datasetId, action, extra = {}) {
+    return apiClient.post(`/datasets/${datasetId}/process`, { action, ...extra }).then((r) => r.data)
+  },
+
+  listFiles(datasetId) {
+    return apiClient.get(`/datasets/${datasetId}/files`).then((r) => r.data)
+  },
+
+  listImages(datasetId) {
+    return apiClient.get(`/datasets/${datasetId}/images`).then((r) => r.data)
   },
 
   delete(datasetId) {

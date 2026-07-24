@@ -1,3 +1,13 @@
+# 后端
+cd /Users/jaclyn/Desktop/train_model/backend
+.venv/bin/uvicorn app.main:app --reload --port 8000
+
+# 前端
+cd /Users/jaclyn/Desktop/train_model/frontend
+npm run dev
+
+
+
 # 算法训练平台 — React + FastAPI 重构方案
 
 > 基于 prototype/ 目录下 14 个 HTML 页面的完整分析

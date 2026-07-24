@@ -28,5 +28,11 @@ Thumbs.db
 .env.local
 .env.*
 
+# Project data
+project_root/
+
+# Storage
+backend/storage/
+
 # Alembic
 backend/alembic/versions/*.pyc
