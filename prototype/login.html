@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 登录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif; background: linear-gradient(135deg, #001529 0%, #003a70 100%); height: 100vh; display: flex; align-items: center; justify-content: center; color: #333; }
+  .login-card { background: #fff; border-radius: 8px; padding: 40px; width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+  .login-card .logo { text-align: center; margin-bottom: 24px; }
+  .login-card .logo .icon { width: 48px; height: 48px; background: linear-gradient(135deg, #1890ff, #36cfc9); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 22px; margin-bottom: 8px; }
+  .login-card h2 { font-size: 18px; text-align: center; margin-bottom: 28px; color: #262626; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; color: #8c8c8c; margin-bottom: 4px; }
+  .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; outline: none; transition: 0.2s; }
+  .form-group input:focus { border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.2); }
+  .btn { width: 100%; padding: 10px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; font-family: inherit; }
+  .btn-primary { background: #1890ff; color: #fff; margin-bottom: 8px; }
+  .btn-primary:hover { background: #40a9ff; }
+  .btn-text { background: transparent; color: #1890ff; padding: 4px; }
+  .btn-text:hover { color: #40a9ff; }
+  .error { color: #ff4d4f; font-size: 12px; margin-top: 4px; display: none; }
+  .hint { text-align: center; font-size: 12px; color: #8c8c8c; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="logo">
+    <div class="icon">AI</div>
+  </div>
+  <h2>算法训练平台</h2>
+
+  <div id="loginForm">
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="username" placeholder="请输入用户名" value="admin">
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" id="password" placeholder="请输入密码" value="123456">
+    </div>
+    <div class="error" id="loginError">用户名或密码错误</div>
+    <button class="btn btn-primary" onclick="login()">登 录</button>
+    <button class="btn btn-text" onclick="showRegister()">还没有账号？立即注册</button>
+  </div>
+
+  <div id="registerForm" style="display:none;">
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="regUsername" placeholder="请输入用户名">
+    </div>
+    <div class="form-group">
+      <label>邮箱</label>
+      <input type="email" id="regEmail" placeholder="请输入邮箱">
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" id="regPassword" placeholder="请输入密码（至少 6 位）">
+    </div>
+    <div class="form-group">
+      <label>角色</label>
+      <select id="regRole" style="width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:6px;font-size:14px;">
+        <option value="engineer">算法工程师</option>
+        <option value="annotator">标注人员</option>
+        <option value="admin">管理员</option>
+        <option value="customer">客户</option>
+      </select>
+    </div>
+    <div class="error" id="regError"></div>
+    <button class="btn btn-primary" onclick="register()">注 册</button>
+    <button class="btn btn-text" onclick="showLogin()">已有账号？返回登录</button>
+  </div>
+
+
+</div>
+
+<script>
+var USERS_KEY = 'platform_users';
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || getDefaultUsers(); } catch(e) { return getDefaultUsers(); }
+}
+function getDefaultUsers() {
+  var defaults = [
+    { username: 'admin', password: '123456', email: 'admin@example.com', role: 'admin', name: '管理员', avatar: '管', createdAt: '2026-06-01' },
+    { username: '张三', password: '123456', email: 'zhangsan@example.com', role: 'engineer', name: '张三', avatar: '张', createdAt: '2026-06-10' },
+    { username: '李四', password: '123456', email: 'lisi@example.com', role: 'annotator', name: '李四', avatar: '李', createdAt: '2026-06-15' },
+    { username: '王五', password: '123456', email: 'wangwu@example.com', role: 'engineer', name: '王五', avatar: '王', createdAt: '2026-06-20' },
+    { username: '赵六', password: '123456', email: 'zhaoliu@example.com', role: 'annotator', name: '赵六', avatar: '赵', createdAt: '2026-07-01' },
+    { username: '孙七', password: '123456', email: 'sunqi@example.com', role: 'engineer', name: '孙七', avatar: '孙', createdAt: '2026-07-05' },
+    { username: '周八', password: '123456', email: 'zhouba@example.com', role: 'annotator', name: '周八', avatar: '周', createdAt: '2026-07-10' },
+    { username: '钱九', password: '123456', email: 'qianjiu@example.com', role: 'customer', name: '钱九', avatar: '钱', createdAt: '2026-07-15' },
+  ];
+  localStorage.setItem(USERS_KEY, JSON.stringify(defaults));
+  return defaults;
+}
+
+function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
+function showLogin() { document.getElementById('registerForm').style.display = 'none'; document.getElementById('loginForm').style.display = 'block'; }
+
+function login() {
+  var u = document.getElementById('username').value.trim();
+  var p = document.getElementById('password').value.trim();
+  if (!u || !p) { showErr('loginError', '请输入用户名和密码'); return; }
+  var users = getUsers();
+  var found = users.find(function(x) { return x.username === u && x.password === p; });
+  if (!found) { showErr('loginError', '用户名或密码错误'); return; }
+  localStorage.setItem('current_user', JSON.stringify(found));
+  location.href = 'projects.html';
+}
+
+function register() {
+  var u = document.getElementById('regUsername').value.trim();
+  var e = document.getElementById('regEmail').value.trim();
+  var p = document.getElementById('regPassword').value.trim();
+  var r = document.getElementById('regRole').value;
+  if (!u || !e || !p) { showErr('regError', '请填写所有字段'); return; }
+  if (p.length < 6) { showErr('regError', '密码至少 6 位'); return; }
+  var users = getUsers();
+  if (users.find(function(x) { return x.username === u; })) { showErr('regError', '用户名已存在'); return; }
+  var newUser = { username: u, email: e, password: p, role: r, name: u, avatar: u.charAt(0), createdAt: new Date().toISOString().slice(0,10) };
+  users.push(newUser);
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  localStorage.setItem('current_user', JSON.stringify(newUser));
+  location.href = 'projects.html';
+}
+
+function showErr(id, msg) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+
+(function() {
+  var user = localStorage.getItem('current_user');
+  if (user) location.href = 'projects.html';
+})();
+</script>
+</body>
+</html>

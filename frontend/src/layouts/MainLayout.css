@@ -1,0 +1,196 @@
+/* ============================================================
+   MainLayout.css — 主布局样式（Sidebar / Header / Content）
+   ============================================================ */
+
+/* ----- Layout Root ----- */
+.main-layout {
+  min-height: 100vh;
+}
+
+/* ----- Sidebar ----- */
+.main-sidebar {
+  background: #001529 !important;
+}
+
+/* ----- Sidebar Logo Area ----- */
+.sidebar-logo-area {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 10px;
+}
+
+.sidebar-logo-area.collapsed {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+.sidebar-collapse-btn {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.sidebar-collapse-btn:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-logo-area.collapsed .sidebar-collapse-btn {
+  display: none;
+}
+
+.sidebar-logo-icon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #1890ff, #36cfc9);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.sidebar-logo-area.collapsed .sidebar-logo-icon {
+  cursor: pointer;
+}
+
+.sidebar-logo-area.collapsed .sidebar-logo-icon:hover {
+  opacity: 0.85;
+}
+
+.sidebar-logo-text {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+/* ----- Sidebar Nav Wrapper ----- */
+.sidebar-nav-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 0;
+}
+
+/* ----- Header ----- */
+.main-header {
+  height: 48px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+}
+
+/* ----- Breadcrumb ----- */
+.main-breadcrumb {
+  font-size: 12px;
+}
+
+/* ----- Header Actions (right side) ----- */
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ----- Header Selector Labels ----- */
+.header-select-label {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+/* ----- User Menu Trigger ----- */
+.user-menu-trigger {
+  cursor: pointer;
+}
+
+.user-menu-name {
+  font-size: 12px;
+}
+
+/* ----- Content Area ----- */
+.main-content {
+  padding: 20px 24px;
+  background: #f0f2f5;
+  overflow: auto;
+  min-height: 0;
+}
+
+.main-content.is-setup {
+  display: flex;
+}
+
+/* ----- Breadcrumb Placeholder (during setup) ----- */
+.main-breadcrumb-placeholder {
+  flex: 1;
+}
+
+/* ----- Header Selector Widths ----- */
+.header-park-select {
+  width: 140px;
+}
+
+.header-task-select {
+  width: 160px;
+}
+
+/* ===== Setup Prompt ===== */
+.setup-prompt {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-card {
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 60px 80px;
+  max-width: 520px;
+}
+
+.sp-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.sp-desc {
+  font-size: 13px;
+  color: #8c8c8c;
+  line-height: 1.6;
+}
+
+.sp-highlight {
+  color: #1890ff;
+  font-weight: 600;
+}

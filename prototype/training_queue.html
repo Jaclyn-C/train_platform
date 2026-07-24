@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 训练队列</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { padding: 24px 28px; }
+  .page-header { margin-bottom: 24px; }
+
+  .stats-row { display: flex; gap: 0; margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--card-shadow); }
+  .stat-card { background: var(--card-bg); padding: 14px 24px; text-align: center; flex: 1; border-right: 1px solid var(--border); }
+  .stat-card:last-child { border-right: none; }
+  .stat-card .stat-value { font-size: 22px; font-weight: 700; }
+  .stat-card .stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  .queue-table { width: 100%; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--card-shadow); overflow: hidden; }
+  .queue-table table { width: 100%; border-collapse: collapse; }
+  .queue-table th { background: #fafafa; padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .queue-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .queue-table tr:last-child td { border-bottom: none; }
+  .queue-table tbody tr { transition: var(--transition); }
+  .queue-table tbody tr:hover { background: #fafafa; }
+
+  .task-name { font-weight: 600; font-size: 13px; }
+  .task-name span { font-weight: 400; font-size: 11px; color: var(--text-secondary); margin-left: 6px; }
+
+  .mini-bar { display: flex; align-items: center; gap: 8px; }
+  .mini-bar-track { flex: 1; min-width: 80px; height: 4px; background: #f0f0f0; border-radius: 2px; overflow: hidden; }
+  .mini-bar-fill { height: 100%; border-radius: 2px; }
+  .mini-bar-fill.c-blue { background: var(--primary); }
+  .mini-bar-fill.c-green { background: var(--success); }
+  .mini-bar-fill.c-orange { background: var(--warning); }
+  .mini-bar-fill.c-red { background: var(--danger); }
+  .mini-bar-pct { font-size: 12px; font-weight: 600; min-width: 36px; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+  .badge-blue { background: #e6f7ff; color: var(--primary); }
+  .badge-orange { background: #fff7e6; color: var(--warning); }
+  .badge-green { background: #f6ffed; color: var(--success); }
+  .badge-red { background: #fff1f0; color: var(--danger); }
+  .badge-gray { background: #f5f5f5; color: var(--text-secondary); }
+  .blip { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .blip-blue { background: var(--primary); }
+  .blip-orange { background: var(--warning); }
+  .blip-green { background: var(--success); }
+  .blip-red { background: var(--danger); }
+  .blip-pulse { background: var(--primary); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+  .act-link { color: var(--primary); cursor: pointer; text-decoration: none; padding: 2px 4px; }
+  .act-link:hover { color: #40a9ff; }
+  .act-link.danger { color: var(--danger); }
+  .act-link.danger:hover { color: #ff7875; }
+  .act-sep { color: var(--text-muted); margin: 0 2px; }
+
+  .btn { padding: 4px 12px; background: #fff; }
+  .btn-outline { color: var(--text); border-color: #d9d9d9; }
+  .btn-outline:hover { color: var(--primary); border-color: var(--primary); }
+
+  .empty-state { padding: 64px 20px; }
+
+  .detail-meta { display: flex; gap: 32px; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+  .detail-meta strong { color: var(--text); }
+  .detail-epoch { font-size: 18px; font-weight: 700; color: var(--primary); padding: 8px 14px; background: var(--primary-light); border-radius: var(--radius); margin-bottom: 16px; display: inline-block; }
+  .detail-charts { display: flex; gap: 12px; }
+  .detail-chart-box { flex: 1; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .detail-chart-box .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  .detail-chart-box canvas { width: 100%; height: 160px; display: block; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <div class="sidebar-group"><div class="sidebar-group-title">平台导航</div>
+      <a class="sidebar-item" href="my_projects.html" data-icon="📁">个人算法</a>
+      <a class="sidebar-item" href="projects.html" data-icon="👥">团队算法</a>
+      <a class="sidebar-item" href="models.html" data-icon="📊">模型总览</a>
+      <a class="sidebar-item" href="models_use.html" data-icon="🔍">模型使用</a>
+      <a class="sidebar-item active" href="#" data-icon="📋">训练队列</a>
+    </div>
+    <div class="sidebar-group"><div class="sidebar-group-title">系统设置</div>
+      <a class="sidebar-item" href="team_manage.html" data-icon="⚙">团队管理</a>
+      <a class="sidebar-item" href="profile.html" data-icon="👤">个人中心</a>
+    </div>
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb"><a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;" data-icon="🏠">首页</a> <span class="sep">›</span> <span>训练队列</span></div>
+    <div class="header-actions">
+      <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+    <div class="page-header"><h2>训练队列</h2><button class="btn btn-outline" onclick="clearCompleted()">清除已完成</button></div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value" style="color:var(--text);" id="statTotal">0</div><div class="stat-label">全部</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--primary);" id="statRunning">0</div><div class="stat-label">训练中</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--warning);" id="statQueued">0</div><div class="stat-label">排队中</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--success);" id="statCompleted">0</div><div class="stat-label">已完成</div></div>
+    </div>
+
+    <div class="queue-table" id="queueTable"><div class="empty-state">暂无训练任务</div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal" style="display:none;" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal" style="width:760px;max-height:85vh;overflow:auto;">
+    <div class="modal-header">
+      <span id="detailTitle">训练详情</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="btn btn-outline" id="btnDetailPause" onclick="pauseFromDetail()" style="display:none;">暂停</button>
+        <button class="btn btn-outline" id="btnDetailResume" onclick="resumeFromDetail()" style="display:none;">继续</button>
+        <button class="btn btn-danger" id="btnDetailStop" onclick="stopFromDetail()" style="display:none;">终止</button>
+        <button class="modal-close" onclick="closeDetailModal()">✕</button>
+      </div>
+    </div>
+    <div style="padding:20px;">
+      <div class="detail-meta" id="detailMeta"></div>
+      <div class="detail-epoch" id="detailEpoch"></div>
+      <div class="detail-charts">
+        <div class="detail-chart-box"><div class="label">Loss</div><canvas id="detailLossChart"></canvas></div>
+        <div class="detail-chart-box"><div class="label">mAP</div><canvas id="detailMapChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clear Confirm Modal -->
+<div class="modal-overlay" id="clearConfirmModal" style="display:none;" onclick="if(event.target===this)closeClearConfirmModal()">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      确认清除
+      <button class="modal-close" onclick="closeClearConfirmModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:28px 32px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">确定要清除训练记录？</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">将清除所有<span style="color:var(--success);font-weight:500;">已完成</span>和<span style="color:var(--danger);font-weight:500;">已终止</span>的训练任务，此操作不可撤销。</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeClearConfirmModal()">取消</button>
+      <button class="btn btn-danger btn-sm" onclick="executeClear()">确认清除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+var KEY = "training_queue";
+
+function read() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; } }
+function write(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
+
+var SORT = { running:0, paused:1, queued:2, completed:3, stopped:4 };
+
+function doSort(arr) {
+  arr.sort(function(a,b) {
+    var va = SORT[a.status]; if (va === undefined) va = 9;
+    var vb = SORT[b.status]; if (vb === undefined) vb = 9;
+    return va - vb;
+  });
+  return arr;
+}
+
+// ── Demo data ──
+function init() {
+  localStorage.removeItem(KEY);
+  var fmt = function(ts) { return new Date(ts).toISOString().slice(0,16).replace("T"," "); };
+  var n = Date.now();
+  var tasks = [
+    { id:"r2", project:"区域入侵检测", name:"区域入侵检测-yolo11m-500e-8b", model:"best.pt", version:"v1.0.0", config:"epochs=500 batch=8 lr=0.001", status:"running", progress:58, currentEpoch:290, totalEpochs:500, submittedAt:fmt(n-3600000), eta:"42m" },
+    { id:"r1", project:"烟火检测", name:"烟火检测-夜间优化版", model:"best.pt", version:"v2.0.0", config:"epochs=1000 batch=16 lr=0.0001", status:"running", progress:34, currentEpoch:342, totalEpochs:1000, submittedAt:fmt(n-5400000), eta:"1h 23m" },
+    { id:"p1", project:"安全帽检测", name:"安全帽检测-yolo11n-300e-32b", model:"last.pt", version:"v0.5.0", config:"epochs=300 batch=32 lr=0.01", status:"paused", progress:22, currentEpoch:67, totalEpochs:300, pausedAt:67, submittedAt:fmt(n-7200000) },
+    { id:"q1", project:"安全帽检测", name:"安全帽检测-yolo11m-800e-16b", model:"best.pt", version:"v1.0.0", config:"epochs=800 batch=16 lr=0.0001", status:"queued", progress:0, currentEpoch:0, totalEpochs:800, submittedAt:fmt(n-1200000) },
+    { id:"c1", project:"保安服检测", name:"保安服检测-yolo11m-800e-16b", model:"best.pt", version:"v1.3.0", config:"epochs=800 batch=16 lr=0.0001", status:"completed", progress:100, mAP50:"0.872", currentEpoch:800, totalEpochs:800, submittedAt:fmt(n-7200000), duration:"2h 15m" },
+    { id:"s1", project:"烟火检测", name:"烟火检测-yolo11m-600e-16b", model:"best.pt", version:"v1.0.0", config:"epochs=600 batch=16 lr=0.01", status:"stopped", progress:50, mAP50:"0.712", currentEpoch:500, totalEpochs:1000, submittedAt:fmt(n-14400000), stoppedAt:"Epoch 500/1000" },
+  ];
+  write(doSort(tasks));
+}
+
+// ── Render ──
+var BADGES = {
+  running:  ["训练中", "badge-blue",  "blip-pulse"],
+  paused:   ["已暂停", "badge-orange", "blip-orange"],
+  queued:   ["排队中", "badge-orange", "blip-orange"],
+  completed:["已完成", "badge-green",  "blip-green"],
+  stopped:  ["已终止", "badge-red",    "blip-red"],
+};
+var BAR_COLORS = { running:"c-blue", paused:"c-orange", completed:"c-green", stopped:"c-red" };
+
+function renderQueue() {
+  var q = doSort(read());
+  document.getElementById("statTotal").textContent = q.length;
+  document.getElementById("statRunning").textContent = q.filter(function(t){return t.status==="running";}).length;
+  document.getElementById("statQueued").textContent = q.filter(function(t){return t.status==="queued";}).length;
+  document.getElementById("statCompleted").textContent = q.filter(function(t){return t.status==="completed";}).length;
+
+  var table = document.getElementById("queueTable");
+  if (q.length === 0) { table.innerHTML = "<div class=empty-state>暂无训练任务</div>"; return; }
+
+  var rows = "";
+  for (var i = 0; i < q.length; i++) {
+    var t = q[i], b = BADGES[t.status] || ["—","badge-gray",""];
+    var pos = t.status === "queued" ? " #" + (q.filter(function(x,k){return x.status==="queued"&&k<i;}).length+1) : "";
+
+    var pct = "";
+    if (t.status === "running" || t.status === "paused")
+      pct = "<div class=mini-bar><div class=mini-bar-track><div class=mini-bar-fill "+(BAR_COLORS[t.status]||"c-blue")+" style=width:"+t.progress+"%></div></div><span class=mini-bar-pct>"+t.progress+"%</span></div>";
+    else if (t.status === "completed")
+      pct = "<div class=mini-bar><div class=mini-bar-track><div class=mini-bar-fill c-green style=width:100%></div></div><span class=mini-bar-pct style=color:var(--success)>100%</span></div>";
+    else if (t.status === "stopped")
+      pct = "<div class=mini-bar><div class=mini-bar-track><div class=mini-bar-fill c-red style=width:"+t.progress+"%></div></div><span class=mini-bar-pct>"+t.progress+"%</span></div>";
+
+    var meta = "";
+    if (t.status === "running") meta = "预计剩余 "+(t.eta||"—");
+    else if (t.status === "queued") meta = t.submittedAt;
+    else if (t.status === "completed") meta = "mAP@50 "+(t.mAP50||"—")+" · "+(t.duration||"—");
+    else if (t.status === "paused") meta = "暂停于 Epoch "+(t.pausedAt||t.currentEpoch);
+    else if (t.status === "stopped") meta = t.stoppedAt||"—";
+
+    // Build action links with data-id attributes and use event delegation
+    var a = function(label, cls) { return "<span class=\""+cls+"\" data-action=\""+label+"\" data-id=\""+t.id+"\">"; };
+    var acts = "";
+    if (t.status === "queued") acts = a("cancel","act-link danger")+"取消</span>";
+    else if (t.status === "running") acts = a("pause","act-link")+"暂停</span><span class=act-sep>·</span>"+a("stop","act-link danger")+"终止</span>";
+    else if (t.status === "paused") acts = a("resume","act-link")+"继续</span><span class=act-sep>·</span>"+a("stop","act-link danger")+"终止</span>";
+    if (t.status !== "queued") acts += (acts?"<span class=act-sep>·</span>":"")+a("detail","act-link")+"详情</span>";
+
+    var nameDisplay = t.name || (t.project + "-" + t.model.replace(".pt",""));
+    rows += "<tr><td><span class=task-name>"+nameDisplay+"<span>"+t.project+" · "+t.model+" "+t.version+"</span></span></td><td style=font-size:11px;color:var(--text-muted)>"+t.config+"</td><td><span class=\"badge "+b[1]+"\"><span class=\"blip "+b[2]+"\"></span>"+b[0]+pos+"</span></td><td style=width:160px>"+pct+"</td><td style=font-size:11px;color:var(--text-secondary)>"+meta+"</td><td style=white-space:nowrap>"+acts+"</td></tr>";
+  }
+  table.innerHTML = "<table><thead><tr><th>算法 / 模型</th><th>配置</th><th>状态</th><th style=width:160px>进度</th><th>信息</th><th style=width:140px>操作</th></tr></thead><tbody>"+rows+"</tbody></table>";
+}
+
+// ── Event delegation on queue table ──
+document.addEventListener("click", function(e) {
+  var el = e.target.closest("[data-action]");
+  if (!el) return;
+  var action = el.getAttribute("data-action");
+  var id = el.getAttribute("data-id");
+  if (!id) return;
+  if (action === "cancel") cancelTask(id);
+  else if (action === "pause") pauseTask(id);
+  else if (action === "resume") resumeTask(id);
+  else if (action === "stop") stopTask(id);
+  else if (action === "detail") viewTaskDetail(id);
+});
+
+// ── Actions ──
+function updateTask(id, fn) {
+  var q = read();
+  fn(q, id);
+  write(doSort(q));
+  renderQueue();
+  promoteNext();
+}
+
+function cancelTask(id) {
+  if (!confirm("取消排队？")) return;
+  updateTask(id, function(q, id) {
+    for (var i = 0; i < q.length; i++) { if (q[i].id === id) { q.splice(i,1); break; } }
+  });
+  showToast("已取消");
+}
+function pauseTask(id) { updateTask(id, function(q, id) { var t = find(q,id); if(t){t.status="paused";t.pausedAt=t.currentEpoch;t.eta="已暂停";} }); showToast("已暂停"); }
+function resumeTask(id) { updateTask(id, function(q, id) { var t = find(q,id); if(t){t.status="running";t.eta="计算中...";} }); showToast("已继续"); }
+function stopTask(id) { if(!confirm("终止训练？"))return; updateTask(id, function(q, id) { var t = find(q,id); if(t){t.status="stopped";t.stoppedAt="手动终止";} }); showToast("已终止"); }
+
+function find(q, id) { for (var i=0;i<q.length;i++) if(q[i].id===id) return q[i]; return null; }
+
+function promoteNext() {
+  var q = read();
+  for (var i=0;i<q.length;i++) { if (q[i].status==="running") return; }
+  for (var j=0;j<q.length;j++) {
+    if (q[j].status==="queued") { q[j].status="running"; q[j].currentEpoch=1; q[j].eta="计算中..."; write(doSort(q)); renderQueue(); showToast("排队任务已自动开始训练"); return; }
+  }
+}
+
+function clearCompleted() {
+  document.getElementById('clearConfirmModal').style.display = 'flex';
+}
+
+function closeClearConfirmModal() {
+  document.getElementById('clearConfirmModal').style.display = 'none';
+}
+
+function executeClear() {
+  var q = read(), f = [];
+  for (var i=0;i<q.length;i++) { if (q[i].status!=="completed"&&q[i].status!=="stopped") f.push(q[i]); }
+  write(f); renderQueue(); showToast("已清除");
+  closeClearConfirmModal();
+}
+
+// ── Detail ──
+var detailId = "";
+function viewTaskDetail(id) {
+  var q = read(), t = find(q, id); if(!t)return;
+  detailId = id;
+  var title = t.name || (t.project + " — " + t.model + " " + t.version);
+  document.getElementById("detailTitle").textContent = title;
+  var st = {running:"训练中",queued:"排队中",completed:"已完成",stopped:"已终止",paused:"已暂停"};
+  var r = t.status==="running", p = t.status==="paused";
+  document.getElementById("btnDetailPause").style.display = r?"inline-flex":"none";
+  document.getElementById("btnDetailResume").style.display = p?"inline-flex":"none";
+  document.getElementById("btnDetailStop").style.display = (r||p)?"inline-flex":"none";
+  document.getElementById("detailMeta").innerHTML = "<span>状态：<strong>"+st[t.status]+"</strong></span><span>提交：<strong>"+t.submittedAt+"</strong></span>"+(t.duration?"<span>耗时：<strong>"+t.duration+"</strong></span>":"")+(t.mAP50?"<span>mAP@50：<strong style=color:var(--success)>"+t.mAP50+"</strong></span>":"");
+  document.getElementById("detailEpoch").textContent = t.currentEpoch&&t.totalEpochs ? "Epoch "+t.currentEpoch+" / "+t.totalEpochs : "";
+  document.getElementById("detailModal").style.display = "flex";
+  setTimeout(function(){ drawLoss(t); drawMap(t); }, 150);
+}
+function pauseFromDetail() { pauseTask(detailId); closeDetailModal(); }
+function resumeFromDetail() { resumeTask(detailId); closeDetailModal(); }
+function stopFromDetail() { stopTask(detailId); closeDetailModal(); }
+function closeDetailModal() { document.getElementById("detailModal").style.display = "none"; }
+
+// ── Charts ──
+function drawLoss(t) {
+  var c = document.getElementById("detailLossChart"), total = t.totalEpochs||1000, cur = t.currentEpoch||0;
+  c.width = c.offsetWidth*2; c.height = 360;
+  var ctx = c.getContext("2d"), w = c.width, h = c.height;
+  var p = {top:12,right:12,bottom:22,left:32}, pw = w-p.left-p.right, ph = h-p.top-p.bottom;
+  ctx.clearRect(0,0,w,h); ctx.strokeStyle="#f0f0f0"; ctx.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=p.top+ph*i/4; ctx.beginPath(); ctx.moveTo(p.left,y); ctx.lineTo(w-p.right,y); ctx.stroke(); ctx.fillStyle="#999"; ctx.font="16px sans-serif"; ctx.textAlign="right"; ctx.fillText((0.10-0.025*i).toFixed(2),p.left-4,y+4);}
+  var pts = Math.max(2,cur>0?cur:(t.status==="completed"?total:total*t.progress/100));
+  ["#ff4d4f","#1890ff","#52c41a"].forEach(function(c){ctx.strokeStyle=c;ctx.lineWidth=2;ctx.beginPath();
+    for(var i=0;i<=pts;i++){var x=p.left+(i/total)*pw, sv=c==="#ff4d4f"?0.08:c==="#1890ff"?0.05:0.03, ev=c==="#ff4d4f"?0.018:c==="#1890ff"?0.008:0.006, val=sv*Math.pow(0.97,i/100)+ev+(Math.random()-0.5)*0.003; if(t.status==="completed"||i<pts){var cy=p.top+(1-val/0.12)*ph; if(i===0)ctx.moveTo(x,cy);else ctx.lineTo(x,cy);}} ctx.stroke();});
+  var lx=w-p.right-180; ctx.font="16px sans-serif";
+  ["box_loss","cls_loss","dfl_loss"].forEach(function(l,i){ctx.fillStyle=["#ff4d4f","#1890ff","#52c41a"][i];ctx.fillRect(lx+i*64,p.top,10,10);ctx.fillStyle="#666";ctx.textAlign="left";ctx.fillText(l,lx+i*64+14,p.top+9);});
+}
+function drawMap(t) {
+  var c = document.getElementById("detailMapChart"), total = t.totalEpochs||1000, cur = t.currentEpoch||0;
+  c.width = c.offsetWidth*2; c.height = 360;
+  var ctx = c.getContext("2d"), w = c.width, h = c.height;
+  var p = {top:12,right:12,bottom:22,left:32}, pw = w-p.left-p.right, ph = h-p.top-p.bottom;
+  ctx.clearRect(0,0,w,h); ctx.strokeStyle="#f0f0f0"; ctx.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=p.top+ph*i/4; ctx.beginPath(); ctx.moveTo(p.left,y); ctx.lineTo(w-p.right,y); ctx.stroke(); ctx.fillStyle="#999"; ctx.font="16px sans-serif"; ctx.textAlign="right"; ctx.fillText((1.0-0.25*i).toFixed(2),p.left-4,y+4);}
+  var pts = Math.max(2,cur>0?cur:(t.status==="completed"?total:total*t.progress/100));
+  [{c:"#1890ff",s:0.3,e:0.87},{c:"#52c41a",s:0.15,e:0.65}].forEach(function(l){ctx.strokeStyle=l.c;ctx.lineWidth=2;ctx.beginPath();
+    for(var i=0;i<=pts;i++){var x=p.left+(i/total)*pw, val=l.s+(l.e-l.s)*(1-Math.exp(-i/(total*0.4)))+(Math.random()-0.5)*0.015; if(t.status==="completed"||i<pts){var cy=p.top+(1-Math.min(1,val))*ph; if(i===0)ctx.moveTo(x,cy);else ctx.lineTo(x,cy);}} ctx.stroke();});
+  var lx=w-p.right-180; ctx.font="16px sans-serif";
+  ["mAP@50","mAP@50-95"].forEach(function(l,i){ctx.fillStyle=[["#1890ff","#52c41a"][i]];ctx.fillRect(lx+i*90,p.top,10,10);ctx.fillStyle="#666";ctx.textAlign="left";ctx.fillText(l,lx+i*90+14,p.top+9);});
+}
+
+// ── Auth & init ──
+(function() {
+  var u = getUser(); if(!u){location.href="login.html";return;}
+  document.getElementById("headerUserName").textContent = u.name;
+  document.getElementById("headerUserAvatar").textContent = u.avatar||u.name.charAt(0);
+  init(); renderQueue();
+})();
+</script>
+</body>
+</html>

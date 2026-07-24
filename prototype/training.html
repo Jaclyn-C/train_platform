@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 模型训练</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 16px 20px; gap: 16px; }
+
+  .train-layout { flex: 1; display: flex; gap: 12px; min-height: 0; }
+
+  .card { display: flex; flex-direction: column; }
+  .card-header { flex-shrink: 0; }
+  .card-body { overflow-y: auto; flex: 1; }
+
+  .config-panel { flex: 1; min-width: 0; }
+
+  .form-section { margin-bottom: 18px; }
+  .form-section:last-child { margin-bottom: 0; }
+  .form-section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .form-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: center; }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-group { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .form-group label { font-size: 11px; color: var(--text-secondary); }
+  .form-group input, .form-group select { padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; font-family: var(--font); height: 30px; box-sizing: border-box; }
+  .form-group input[type="number"] { width: 100%; }
+  .form-group .hint { font-size: 10px; color: var(--text-muted); }
+  .form-inline { display: flex; align-items: center; gap: 6px; }
+  .form-inline label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+  .form-inline input[type="number"] { width: 80px; }
+
+  .toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #d9d9d9; border-radius: 20px; transition: var(--transition); }
+  .toggle .slider::before { content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: var(--transition); }
+  .toggle input:checked + .slider { background: var(--primary); }
+  .toggle input:checked + .slider::before { transform: translateX(16px); }
+
+  .collapse-toggle { cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--primary); font-size: 12px; padding: 4px 0; user-select: none; }
+  .collapse-toggle:hover { color: #40a9ff; }
+  .collapse-content { display: none; }
+  .collapse-content.open { display: block; }
+
+  /* ===== Augmentation Panel ===== */
+  .aug-section { background: #fafafa; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .aug-section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .aug-master-toggle { display: flex; align-items: center; gap: 6px; }
+  .aug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+  .aug-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #fff; border: 1px solid var(--border); border-radius: 4px; transition: var(--transition); }
+  .aug-item:hover { border-color: var(--primary); }
+  .aug-item.disabled { opacity: 0.45; pointer-events: none; }
+  .aug-item .aug-label { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .aug-item .aug-label .aug-code { font-size: 10px; color: var(--text-muted); font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .aug-item .aug-desc { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .aug-item .aug-control { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .aug-item .aug-val { font-size: 11px; font-weight: 600; color: var(--primary); min-width: 36px; text-align: right; }
+  .aug-item input[type="range"] { width: 80px; accent-color: var(--primary); }
+  .aug-item input[type="range"]:disabled { opacity: 0.3; }
+
+  .table th { position: sticky; top: 0; }
+
+  .monitor-panel { display: none; }
+  .monitor-panel.active { display: flex; flex-direction: column; }
+  .monitor-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .monitor-header .epoch-text { font-size: 18px; font-weight: 700; }
+  .monitor-header .eta-text { font-size: 12px; color: var(--text-secondary); }
+  .chart-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+  .chart-box .chart-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+  .chart-box canvas { width: 100%; height: 120px; display: block; }
+  .log-box { background: #1e1e1e; color: #d4d4d4; border-radius: var(--radius); padding: 10px 14px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 10px; height: 200px; overflow-y: auto; line-height: 1.55; margin-bottom: 12px; white-space: pre-wrap; word-break: break-all; }
+  .log-box .log-banner { color: #ffd700; font-weight: 600; }
+  .log-box .log-header { color: #4fc3f7; }
+  .log-box .log-cfg { color: #bdbdbd; }
+  .log-box .log-dataInfo { color: #80cbc4; }
+  .log-box .log-time { color: #6a9955; }
+  .log-box .log-epoch { color: #e0e0e0; }
+  .log-box .log-val { color: #9cdcfe; }
+  .log-box .log-valHeader { color: #888; }
+  .log-box .log-separator { color: #ffab40; }
+  .log-box .log-result { color: #a5d6a7; }
+  .log-box .log-speed { color: #ce93d8; }
+  .log-box .log-savePath { color: #81d4fa; }
+  .log-box .log-note { color: #888; font-style: italic; }
+
+  .result-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
+  .result-box .result-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
+  .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .result-item { background: #fafafa; border-radius: 4px; padding: 10px 14px; text-align: center; }
+  .result-item .metric-value { font-size: 20px; font-weight: 700; }
+  .result-item .metric-label { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+
+  .modal { width: 700px; max-height: 85vh; overflow: auto; }
+
+  /* ===== Multi-Select Dataset ===== */
+  .multi-select { position: relative; user-select: none; }
+  .ms-trigger { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; background: #fff; cursor: pointer; min-height: 30px; box-sizing: border-box; }
+  .ms-trigger:hover { border-color: var(--primary); }
+  .ms-trigger .ms-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .ms-trigger .ms-arrow { color: var(--text-muted); font-size: 10px; margin-left: 6px; flex-shrink: 0; }
+  .multi-select.open .ms-trigger { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.15); }
+  .ms-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d9d9d9; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; max-height: 180px; overflow-y: auto; margin-top: 2px; }
+  .multi-select.open .ms-dropdown { display: block; }
+  .ms-option { display: flex; align-items: center; gap: 6px; padding: 7px 10px; font-size: 12px; cursor: pointer; transition: var(--transition); margin: 0; font-weight: 400; }
+  .ms-option:hover { background: var(--primary-light); }
+  .ms-option input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; margin: 0; flex-shrink: 0; }
+  .ms-trigger .ms-placeholder { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-group" id="sidebarTopHome"><a class="sidebar-item" href="my_projects.html" data-icon="🏠">首页</a></div>
+    <div class="sidebar-group" id="sidebarProjectGroup" style="display:none;">
+      <div class="sidebar-group-title" style="font-size:13px;color:#fff;font-weight:600;text-transform:none;opacity:1;" id="sidebarProjectName">当前算法：—</div>
+    </div>
+    <div class="sidebar-group" id="sidebarSubPages" style="display:none;">
+      <a class="sidebar-item" href="data_center.html" data-icon="📦">数据中心</a>
+      <a class="sidebar-item" href="annotation.html" data-icon="🏷">数据标注</a>
+      <a class="sidebar-item active" href="#" data-icon="🏋">模型训练</a>
+      <a class="sidebar-item" href="evaluation.html" data-icon="📈">模型评估</a>
+      <a class="sidebar-item" href="trial.html" data-icon="🧪">模型试用</a>
+      <a class="sidebar-item" href="deployment.html" data-icon="🚀">模型部署</a>
+    </div>
+
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<!-- Main -->
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb">
+      <a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;">首页</a> <span class="sep">›</span> <span>模型训练</span>
+    </div>
+    <div class="header-actions">
+            <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html" data-icon="👤">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <h2>模型训练</h2>
+        <button class="btn btn-default" onclick="openHistoryModal()">训练历史</button>
+      </div>
+    </div>
+
+    <div class="train-layout">
+
+      <!-- ===== Left: Config / Monitor ===== -->
+      <div class="card config-panel">
+        <!-- Config View -->
+        <div class="card-header">训练配置</div>
+        <div class="card-body" id="configView">
+          <!-- Basic Settings -->
+          <div class="form-section">
+            <div class="form-section-title">基础设置</div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1;">
+                <label>训练数据集</label>
+                <div class="multi-select" id="trainDatasetWrap">
+                  <div class="ms-trigger" onclick="toggleMultiSelect('trainDatasetWrap')">
+                    <span class="ms-text" id="trainDatasetText">上传批次_20260628 train/ (771 张)</span>
+                    <span class="ms-arrow">▾</span>
+                  </div>
+                  <div class="ms-dropdown" id="trainDatasetDrop">
+                    <label class="ms-option"><input type="checkbox" value="train_01" checked onchange="updateMultiSelect('trainDatasetWrap')"> 上传批次_20260628 train/ (771 张)</label>
+                    <label class="ms-option"><input type="checkbox" value="train_02" onchange="updateMultiSelect('trainDatasetWrap')"> 上传批次_20260701 train/ (650 张)</label>
+                    <label class="ms-option"><input type="checkbox" value="train_03" onchange="updateMultiSelect('trainDatasetWrap')"> 上传批次_20260702 train/ (520 张)</label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>验证数据集</label>
+                <div class="multi-select" id="valDatasetWrap">
+                  <div class="ms-trigger" onclick="toggleMultiSelect('valDatasetWrap')">
+                    <span class="ms-text" id="valDatasetText">上传批次_20260628 val/ (331 张)</span>
+                    <span class="ms-arrow">▾</span>
+                  </div>
+                  <div class="ms-dropdown" id="valDatasetDrop">
+                    <label class="ms-option"><input type="checkbox" value="val_01" checked onchange="updateMultiSelect('valDatasetWrap')"> 上传批次_20260628 val/ (331 张)</label>
+                    <label class="ms-option"><input type="checkbox" value="val_02" onchange="updateMultiSelect('valDatasetWrap')"> 上传批次_20260701 val/ (279 张)</label>
+                    <label class="ms-option"><input type="checkbox" value="val_03" onchange="updateMultiSelect('valDatasetWrap')"> 上传批次_20260702 val/ (223 张)</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:2;">
+                <label>任务名称 <span style="font-size:10px;color:var(--text-muted);">选填，不填自动生成</span></label>
+                <input type="text" id="taskName" placeholder="如：保安服检测-yolo11m-800e-16b" style="padding:5px 8px;border:1px solid #d9d9d9;border-radius:4px;font-size:12px;font-family:var(--font);">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:2;">
+                <label>预训练模型</label>
+                <select id="pretrainedModel" style="flex:1;" onchange="updateTaskName()">
+                  <option value="yolo11n.pt">yolo11n.pt (轻量)</option>
+                  <option value="yolo11m.pt" selected>yolo11m.pt (默认)</option>
+                  <option value="yolo11l.pt">yolo11l.pt (较大)</option>
+                  <option value="yolo11x.pt">yolo11x.pt (最大)</option>
+                </select>
+                <span class="hint">默认使用 yolo11m.pt</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Training Hyperparams -->
+          <div class="form-section">
+            <div class="form-section-title">训练超参数</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>训练轮数 (epochs)</label>
+                <input type="number" id="epochs" onchange="updateTaskName()" value="50" min="1">
+              </div>
+              <div class="form-group">
+                <label>批处理大小 (batch)</label>
+                <input type="number" id="batch" onchange="updateTaskName()" value="16" min="1">
+              </div>
+              <div class="form-group">
+                <label>图像尺寸 (imgsz)</label>
+                <input type="number" id="imgsz" value="640" min="32" step="32">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>训练设备</label>
+                <select id="device">
+                  <option value="0" selected>GPU 0</option>
+                  <option value="1">GPU 1</option>
+                  <option value="cpu">CPU</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>优化器</label>
+                <select id="optimizer">
+                  <option value="AdamW" selected>AdamW</option>
+                  <option value="SGD">SGD</option>
+                  <option value="Adam">Adam</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>数据加载进程 (workers)</label>
+                <input type="number" id="workers" value="0" min="0">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>初始学习率 (lr0)</label>
+                <input type="number" id="lr0" value="0.0001" step="0.0001">
+              </div>
+              <div class="form-group">
+                <label>最终学习率因子 (lrf)</label>
+                <input type="number" id="lrf" value="0.01" step="0.001">
+              </div>
+            </div>
+
+            <!-- Advanced (collapsible) -->
+            <div class="collapse-toggle" onclick="toggleAdvanced()" id="collapseToggle">
+              <span id="collapseArrow">▶</span> 更多参数
+            </div>
+            <div class="collapse-content" id="collapseContent">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>动量 (momentum)</label>
+                  <input type="number" id="momentum" value="0.9" step="0.001">
+                </div>
+                <div class="form-group">
+                  <label>权重衰减 (weight_decay)</label>
+                  <input type="number" id="weightDecay" value="0.05" step="0.01">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>早停轮数 (patience)</label>
+                  <input type="number" id="patience" value="100" min="0">
+                  <span class="hint">精度不提升多少轮后自动停止</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <div class="form-inline"><label>混合精度训练 (amp)</label><label class="toggle"><input type="checkbox" id="amp" checked><span class="slider"></span></label></div>
+                </div>
+              </div>
+
+              <!-- Data Augmentation -->
+              <div class="aug-section" style="margin-top:6px;">
+                <div class="aug-section-title">
+                  数据增强
+                  <label class="toggle" style="vertical-align:middle;" onclick="event.stopPropagation()">
+                    <input type="checkbox" id="augMaster" checked onchange="toggleAugPanel()">
+                    <span class="slider"></span>
+                  </label>
+                  <span style="font-size:10px;color:var(--text-muted);font-weight:400;">关闭后以下所有增强均不生效</span>
+                </div>
+                <div class="aug-grid" id="augGrid">
+                  <div class="aug-item">
+                    <div>
+                      <div class="aug-label">色调 <span class="aug-code">hsv_h</span></div>
+                      <div class="aug-desc">HSV-Hue 通道增强幅度</div>
+                    </div>
+                    <div class="aug-control">
+                      <input type="range" id="aug_hsv_h" min="0" max="10" value="1" step="0.5" oninput="document.getElementById('val_hsv_h').textContent=(this.value/100).toFixed(3)">
+                      <span class="aug-val" id="val_hsv_h">0.015</span>
+                    </div>
+                  </div>
+                  <div class="aug-item">
+                    <div>
+                      <div class="aug-label">饱和度 <span class="aug-code">hsv_s</span></div>
+                      <div class="aug-desc">HSV-Saturation 通道增强幅度</div>
+                    </div>
+                    <div class="aug-control">
+                      <input type="range" id="aug_hsv_s" min="0" max="100" value="70" step="1" oninput="document.getElementById('val_hsv_s').textContent=(this.value/100).toFixed(2)">
+                      <span class="aug-val" id="val_hsv_s">0.70</span>
+                    </div>
+                  </div>
+                  <div class="aug-item">
+                    <div>
+                      <div class="aug-label">亮度 <span class="aug-code">hsv_v</span></div>
+                      <div class="aug-desc">HSV-Value 通道增强幅度</div>
+                    </div>
+                    <div class="aug-control">
+                      <input type="range" id="aug_hsv_v" min="0" max="100" value="40" step="1" oninput="document.getElementById('val_hsv_v').textContent=(this.value/100).toFixed(2)">
+                      <span class="aug-val" id="val_hsv_v">0.40</span>
+                    </div>
+                  </div>
+                  <div class="aug-item">
+                    <div>
+                      <div class="aug-label">随机旋转 <span class="aug-code">degrees</span></div>
+                      <div class="aug-desc">随机旋转角度范围（°）</div>
+                    </div>
+                    <div class="aug-control">
+                      <input type="range" id="aug_degrees" min="0" max="180" value="10" step="1" oninput="document.getElementById('val_degrees').textContent=this.value+'.0'">
+                      <span class="aug-val" id="val_degrees">10.0</span>
+                    </div>
+                  </div>
+                  <div class="aug-item">
+                    <div>
+                      <div class="aug-label">水平翻转 <span class="aug-code">fliplr</span></div>
+                      <div class="aug-desc">随机水平翻转概率</div>
+                    </div>
+                    <div class="aug-control">
+                      <input type="range" id="aug_fliplr" min="0" max="100" value="50" step="5" oninput="document.getElementById('val_fliplr').textContent=(this.value/100).toFixed(2)">
+                      <span class="aug-val" id="val_fliplr">0.50</span>
+                    </div>
+                  </div>
+                  <div class="aug-item">
+                    <div>
+                      <div class="aug-label">Mosaic 增强 <span class="aug-code">mosaic</span></div>
+                      <div class="aug-desc">4 张图拼接为 1 张训练</div>
+                    </div>
+                    <div class="aug-control">
+                      <input type="range" id="aug_mosaic" min="0" max="100" value="100" step="5" oninput="document.getElementById('val_mosaic').textContent=(this.value/100).toFixed(2)">
+                      <span class="aug-val" id="val_mosaic">1.00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Train Button -->
+          <button class="btn btn-primary btn-lg" style="width:100%;" onclick="submitToQueue()" id="btnStart">提交到训练队列</button>
+        </div>
+
+        <!-- Monitor View (hidden initially) -->
+        <div class="card-header" id="monitorHeader" style="display:none;">训练监控 <span style="font-weight:400;font-size:12px;color:var(--success);" id="monitorStatus">● 运行中</span></div>
+        <div class="card-body monitor-panel" id="monitorView">
+          <div class="monitor-header">
+            <span class="epoch-text" id="monitorEpoch">Epoch 0/1000</span>
+            <span class="eta-text" id="monitorETA">预计剩余: 计算中...</span>
+          </div>
+          <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%;"></div></div>
+
+          <!-- Loss Chart -->
+          <div class="chart-box">
+            <div class="chart-title">Loss 趋势</div>
+            <canvas id="lossChart"></canvas>
+          </div>
+
+          <!-- mAP Chart -->
+          <div class="chart-box">
+            <div class="chart-title">mAP 趋势</div>
+            <canvas id="mapChart"></canvas>
+          </div>
+
+          <!-- Log -->
+          <div class="log-box" id="logBox"></div>
+
+          <!-- Actions -->
+          <div class="flex gap-8">
+            <button class="btn btn-default btn-sm" onclick="pauseTraining()" id="btnPause">暂停</button>
+            <button class="btn btn-danger btn-sm" onclick="stopTraining()">终止训练</button>
+          </div>
+
+          <!-- Result (shown when done) -->
+          <div class="result-box" id="resultBox" style="display:none;">
+            <div class="result-title">训练完成</div>
+            <div class="result-grid" id="resultGrid"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Training History Modal -->
+<div class="modal-overlay" id="historyModal" style="display:none;" onclick="if(event.target==this)closeHistoryModal()">
+  <div class="modal" style="width:900px;">
+    <div class="modal-header">
+      训练历史
+      <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+    </div>
+    <div style="padding:0;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>算法</th>
+            <th>任务名称</th>
+            <th>数据集</th>
+            <th>模型</th>
+            <th>Epochs</th>
+            <th>mAP@50</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- History Result Modal -->
+<div class="modal-overlay" id="resultModal" style="display:none;" onclick="if(event.target==this)closeResultModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="resultModalTitle">训练结果详情</span>
+      <button class="modal-close" onclick="closeResultModal()">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div class="result-grid" id="resultModalMetrics"></div>
+      <div class="chart-box mt-16">
+        <div class="chart-title">Loss 曲线</div>
+        <canvas id="resultLossChart" style="height:140px;"></canvas>
+      </div>
+      <div class="chart-box mt-12">
+        <div class="chart-title">mAP 曲线</div>
+        <canvas id="resultMapChart" style="height:140px;"></canvas>
+      </div>
+      <div class="flex-between mt-16" style="font-size:12px;">
+        <span class="text-secondary">模型文件：<strong id="resultModelPath">—</strong></span>
+        <span class="text-secondary">配置文件：<strong id="resultConfig">—</strong></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeResultModal()">关闭</button>
+      <button class="btn btn-primary btn-sm" onclick="closeResultModal();showToast('best.pt 已下载')">下载 best.pt</button>
+      <button class="btn btn-primary btn-sm" onclick="closeResultModal();showToast('last.pt 已下载')">下载 last.pt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal" style="display:none;" onclick="if(event.target===this)closeConfirmModal()">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <span id="confirmModalTitle">确认操作</span>
+      <button class="modal-close" onclick="closeConfirmModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:28px 32px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;" id="confirmModalMsg"></div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;" id="confirmModalHint"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeConfirmModal()">取消</button>
+      <button class="btn btn-danger btn-sm" onclick="executeConfirm()">确认</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+// ==================== STATE ====================
+let isTraining = false;
+let isPaused = false;
+let currentEpoch = 0;
+let totalEpochs = 1000;
+let trainInterval = null;
+let lossData = { box: [], cls: [], dfl: [], epochs: [] };
+let mapData = { mAP50: [], mAP5095: [], epochs: [] };
+
+// ==================== HISTORY DATA ====================
+const historyResults = [
+  { project:'保安服检测', taskName:'保安服检测-夜间场景优化', time:'2026-07-12 08:20', model:'yolo11m.pt', epochs:'1000', train:'771', val:'331', mAP50:'-', mAP5095:'-', status:'running', path:'models/security_v4/best.pt' },
+  { project:'保安服检测', taskName:'保安服检测-yolo11m-800e-16b', time:'2026-06-28 09:15', model:'yolo11m.pt', epochs:'800', train:'771', val:'331', mAP50:'0.872', mAP5095:'0.651', status:'done', path:'models/security_v3/best.pt' },
+  { project:'保安服检测', taskName:'保安服检测-yolo11l-500e-32b', time:'2026-06-20 14:00', model:'yolo11l.pt', epochs:'500', train:'771', val:'331', mAP50:'0.813', mAP5095:'0.587', status:'stopped', path:'models/security_v2/last.pt' },
+  { project:'烟火检测', taskName:'烟火检测-高精度版', time:'2026-07-10 16:45', model:'yolo11x.pt', epochs:'1500', train:'892', val:'383', mAP50:'-', mAP5095:'-', status:'running', path:'models/fire_v2/best.pt' },
+  { project:'烟火检测', taskName:'烟火检测-yolo11m-1000e-16b', time:'2026-07-02 15:30', model:'yolo11m.pt', epochs:'1000', train:'892', val:'383', mAP50:'0.918', mAP5095:'0.734', status:'done', path:'models/fire_v1/best.pt' },
+  { project:'烟火检测', taskName:'烟火检测-yolo11m-600e-16b', time:'2026-06-30 16:45', model:'yolo11m.pt', epochs:'600', train:'892', val:'383', mAP50:'0.886', mAP5095:'0.691', status:'done', path:'models/security_v3/best.pt' },
+  { project:'烟火检测', taskName:'烟火检测-yolo11n-400e-8b', time:'2026-06-25 10:00', model:'yolo11n.pt', epochs:'400', train:'650', val:'279', mAP50:'0.745', mAP5095:'-', status:'stopped', path:'models/fire_v0/last.pt' },
+  { project:'安全帽检测', taskName:'安全帽检测-yolo11n-500e-16b', time:'2026-06-20 14:00', model:'yolo11n.pt', epochs:'500', train:'650', val:'279', mAP50:'-', mAP5095:'-', status:'stopped', path:'models/helmet_v1/last.pt' },
+];
+
+
+// ==================== AUGMENTATION ====================
+function toggleAugPanel() {
+  var master = document.getElementById('augMaster').checked;
+  var items = document.querySelectorAll('#augGrid .aug-item');
+  items.forEach(function(item) {
+    if (master) { item.classList.remove('disabled'); }
+    else { item.classList.add('disabled'); }
+  });
+}
+
+// ==================== MULTI-SELECT ====================
+function toggleMultiSelect(wrapId) {
+  var el = document.getElementById(wrapId);
+  el.classList.toggle('open');
+}
+function updateMultiSelect(wrapId) {
+  var el = document.getElementById(wrapId);
+  var checked = el.querySelectorAll('input[type="checkbox"]:checked');
+  var textEl = el.querySelector('.ms-text');
+  var labels = [];
+  checked.forEach(function(cb) {
+    var label = cb.parentElement.textContent.trim();
+    labels.push(label);
+  });
+  if (labels.length === 0) {
+    textEl.textContent = '— 未选择 —';
+    textEl.classList.add('ms-placeholder');
+  } else if (labels.length <= 2) {
+    textEl.textContent = labels.join('；');
+    textEl.classList.remove('ms-placeholder');
+  } else {
+    textEl.textContent = '已选 ' + labels.length + ' 个数据集';
+    textEl.classList.remove('ms-placeholder');
+  }
+}
+function getSelectedDatasets(wrapId) {
+  var el = document.getElementById(wrapId);
+  var checked = el.querySelectorAll('input[type="checkbox"]:checked');
+  var values = [];
+  checked.forEach(function(cb) { values.push(cb.value); });
+  return values;
+}
+// Close multi-select dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select.open').forEach(function(el) { el.classList.remove('open'); });
+  }
+});
+
+// ==================== CONFIRM MODAL ====================
+var _pendingConfirm = null;
+function showConfirmModal(title, msg, hint, callback) {
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalMsg').textContent = msg;
+  document.getElementById('confirmModalHint').textContent = hint || '';
+  document.getElementById('confirmModal').style.display = 'flex';
+  _pendingConfirm = callback;
+}
+function closeConfirmModal() {
+  document.getElementById('confirmModal').style.display = 'none';
+  _pendingConfirm = null;
+}
+function executeConfirm() {
+  if (_pendingConfirm) { _pendingConfirm(); _pendingConfirm = null; }
+  document.getElementById('confirmModal').style.display = 'none';
+}
+
+// ==================== COLLAPSIBLE ====================
+function toggleAdvanced() {
+  const content = document.getElementById('collapseContent');
+  const arrow = document.getElementById('collapseArrow');
+  content.classList.toggle('open');
+  arrow.textContent = content.classList.contains('open') ? '▼' : '▶';
+}
+
+// ==================== TRAINING ====================
+// ── Auto-generate task name from params ──
+function updateTaskName() {
+  var nameInput = document.getElementById("taskName");
+  if (!nameInput) return;
+  var projectName = getProjectName(localStorage.getItem("current_project") || "");
+  var pretrained = document.getElementById("pretrainedModel").value.replace(".pt", "");
+  var epochs = document.getElementById("epochs").value;
+  var batch = document.getElementById("batch").value;
+  nameInput.placeholder = projectName + "-" + pretrained + "-" + epochs + "e-" + batch + "b";
+}
+// ── Submit to training queue ──
+function submitToQueue() {
+  var trainDS = getSelectedDatasets("trainDatasetWrap");
+  var valDS = getSelectedDatasets("valDatasetWrap");
+  if (trainDS.length === 0 || valDS.length === 0) { showToast("请选择训练集和验证集"); return; }
+  var projectName = getProjectName(localStorage.getItem("current_project") || "");
+  var config = "epochs=" + document.getElementById("epochs").value + ", batch=" + document.getElementById("batch").value + ", imgsz=" + document.getElementById("imgsz").value + ", " + document.getElementById("optimizer").value + ", lr=" + document.getElementById("lr0").value;
+  // Use user-entered name or auto-generate from params
+  var taskName = document.getElementById("taskName").value.trim();
+  if (!taskName) {
+    var pretrained = document.getElementById("pretrainedModel").value.replace(".pt", "");
+    var epochs = document.getElementById("epochs").value;
+    var batch = document.getElementById("batch").value;
+    taskName = projectName + "-" + pretrained + "-" + epochs + "e-" + batch + "b";
+  }
+  var queue = [];
+  try { queue = JSON.parse(localStorage.getItem("training_queue")) || []; } catch(e) {}
+  queue.push({
+    id: "q_" + Date.now(),
+    project: projectName,
+    name: taskName,
+    model: document.getElementById("pretrainedModel").value,
+    version: "v" + new Date().toISOString().slice(2,10).replace(/-/g,""),
+    config: config,
+    status: "queued",
+    progress: 0,
+    currentEpoch: 0, totalEpochs: parseInt(document.getElementById("epochs").value) || 1000,
+    submittedAt: new Date().toISOString().slice(0,16).replace("T"," ")
+  });
+  localStorage.setItem("training_queue", JSON.stringify(queue));
+  showToast("训练任务已提交到队列！当前队列共 " + queue.length + " 个任务，查看训练队列页面");
+}
+function startTraining() {
+  const trainDS = getSelectedDatasets("trainDatasetWrap");
+  const valDS = getSelectedDatasets("valDatasetWrap");
+  if (trainDS.length === 0 || valDS.length === 0) { showToast('请选择训练集和验证集'); return; }
+
+  totalEpochs = parseInt(document.getElementById('epochs').value) || 1000;
+  const batch = document.getElementById('batch').value;
+  const imgsz = document.getElementById('imgsz').value;
+  const device = document.getElementById('device').value;
+  const optimizer = document.getElementById('optimizer').value;
+  const lr0 = document.getElementById('lr0').value;
+  const lrf = document.getElementById('lrf').value;
+  const momentum = document.getElementById('momentum').value;
+  const weightDecay = document.getElementById('weightDecay').value;
+  const workers = document.getElementById('workers').value;
+  const amp = document.getElementById('amp').checked;
+  const augEnabled = document.getElementById('augMaster').checked;
+  const aug_hsv_h = parseFloat(document.getElementById('aug_hsv_h').value) / 100;
+  const aug_hsv_s = parseFloat(document.getElementById('aug_hsv_s').value) / 100;
+  const aug_hsv_v = parseFloat(document.getElementById('aug_hsv_v').value) / 100;
+  const aug_degrees = parseInt(document.getElementById('aug_degrees').value);
+  const aug_fliplr = parseFloat(document.getElementById('aug_fliplr').value) / 100;
+  const aug_mosaic = parseFloat(document.getElementById('aug_mosaic').value) / 100;
+  const pretrained = document.getElementById('pretrainedModel').value;
+  const deviceStr = device === 'cpu' ? 'CPU' : 'cuda:' + device;
+
+  currentEpoch = 0;
+  isTraining = true;
+  isPaused = false;
+  lossData = { box: [], cls: [], dfl: [], epochs: [] };
+  mapData = { mAP50: [], mAP5095: [], epochs: [] };
+
+  // Switch views
+  document.getElementById('configView').style.display = 'none';
+  document.querySelector('.config-panel .card-header:first-of-type').style.display = 'none';
+  document.getElementById('monitorHeader').style.display = 'flex';
+  document.getElementById('monitorView').classList.add('active');
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('btnPause').textContent = '暂停';
+  document.getElementById('monitorStatus').innerHTML = '<span style="color:var(--success);">● 运行中</span>';
+  document.getElementById('logBox').innerHTML = '';
+
+  // === Training Start Header (aligning with PDF 图4-5) ===
+  appendLog('', 'blank');
+  appendLog('Ultralytics YOLOv8.2.0 🚀 Python-3.11.5 torch-2.3.0 ' + deviceStr, 'banner');
+
+  // Model summary
+  appendLog('', 'blank');
+  appendLog('Model summary (fused): 268 layers, 20,139,377 parameters, 0 gradients, 68.7 GFLOPs', 'header');
+  appendLog('', 'blank');
+
+  // Config table
+  const cfgLines = [
+    ['model', pretrained],
+    ['data', 'data/dataset.yaml'],
+    ['epochs', String(totalEpochs)],
+    ['time', ''],
+    ['batch', String(batch)],
+    ['imgsz', String(imgsz)],
+    ['plots', 'True'],
+    ['optimizer', optimizer + '  lr=' + String(parseFloat(lr0)) + '  momentum=' + momentum + '  weight_decay=' + weightDecay],
+    ['lr0', String(parseFloat(lr0))],
+    ['lrf', String(parseFloat(lrf))],
+    ['momentum', String(parseFloat(momentum))],
+    ['weight_decay', String(parseFloat(weightDecay))],
+    ['warmup_epochs', '3.0'],
+    ['warmup_momentum', '0.8'],
+    ['warmup_bias_lr', String(parseFloat(lr0))],
+    ['box', '7.5'],
+    ['cls', '0.5'],
+    ['dfl', '1.5'],
+  ];
+  cfgLines.forEach(([k, v]) => {
+    appendLog(k.padEnd(18) + v, 'cfg');
+  });
+
+  // Data config
+  appendLog('', 'blank');
+  appendLog('data: data/dataset.yaml', 'header');
+  appendLog('train: ' + trainDS.length + ' 个数据集, 共 771 images, 5 classes', 'dataInfo');
+  appendLog('val: ' + valDS.length + ' 个数据集, 共 331 images', 'dataInfo');
+  appendLog('test: None', 'dataInfo');
+  appendLog('', 'blank');
+
+  // Resume / AMP / Augment / Workers
+  appendLog('resume:  False', 'cfg');
+  appendLog('amp:  ' + String(amp), 'cfg');
+  appendLog('augment:  ' + String(augEnabled), 'cfg');
+  if (augEnabled) {
+    appendLog('  hsv_h: ' + aug_hsv_h.toFixed(3) + '  hsv_s: ' + aug_hsv_s.toFixed(2) + '  hsv_v: ' + aug_hsv_v.toFixed(2), 'cfg');
+    appendLog('  degrees: ' + aug_degrees + '  fliplr: ' + aug_fliplr.toFixed(2) + '  mosaic: ' + aug_mosaic.toFixed(2), 'cfg');
+  }
+  appendLog('workers:  ' + workers, 'cfg');
+  appendLog('save_period:  -1', 'cfg');
+  appendLog('', 'blank');
+
+  appendLog('Training starting...', 'banner');
+  appendLog('', 'blank');
+
+  // Simulate first validation before epoch 1
+  const initTime = new Date().toTimeString().slice(0, 8);
+  appendLog(`[${initTime}]  Validating initial model on ${valDS.length} dataset(s)...`, 'info');
+  setTimeout(() => {
+    appendLog(`[${new Date().toTimeString().slice(0,8)}]  val: box=0.0812 cls=0.0438 dfl=0.0311  mAP50=0.312  mAP50-95=0.185`, 'val');
+    appendLog('', 'blank');
+
+    // Start epoch loop
+    runEpochLoop();
+  }, 500);
+}
+
+function runEpochLoop() {
+  const batch = parseInt(document.getElementById('batch').value) || 16;
+  const imgsz = document.getElementById('imgsz').value;
+
+  trainInterval = setInterval(() => {
+    if (isPaused) return;
+    currentEpoch++;
+    const pct = Math.round(currentEpoch / totalEpochs * 100);
+    const time = new Date().toTimeString().slice(0, 8);
+
+    document.getElementById('monitorEpoch').textContent = `Epoch ${currentEpoch}/${totalEpochs}`;
+    document.getElementById('progressFill').style.width = pct + '%';
+
+    // Simulate metrics (trend down over time)
+    const boxLoss = (0.082 * Math.pow(0.97, currentEpoch/100) + 0.010 + Math.random() * 0.004).toFixed(4);
+    const clsLoss = (0.046 * Math.pow(0.97, currentEpoch/100) + 0.005 + Math.random() * 0.003).toFixed(4);
+    const dflLoss = (0.035 * Math.pow(0.97, currentEpoch/100) + 0.005 + Math.random() * 0.002).toFixed(4);
+    const mAP50 = Math.min(0.94, 0.32 + 0.62 * (1 - Math.exp(-currentEpoch/300)) + Math.random() * 0.015);
+    const mAP5095 = Math.min(0.78, 0.18 + 0.60 * (1 - Math.exp(-currentEpoch/400)) + Math.random() * 0.015);
+    const inst = Math.floor(10 + Math.random() * 8);
+    const gpuMem = (2.3 + Math.random() * 0.4).toFixed(1);
+
+    lossData.epochs.push(currentEpoch);
+    lossData.box.push(parseFloat(boxLoss));
+    lossData.cls.push(parseFloat(clsLoss));
+    lossData.dfl.push(parseFloat(dflLoss));
+    mapData.epochs.push(currentEpoch);
+    mapData.mAP50.push(mAP50);
+    mapData.mAP5095.push(mAP5095);
+
+    const eta = Math.round((totalEpochs - currentEpoch) * 0.15);
+    document.getElementById('monitorETA').textContent = `预计剩余: ${eta > 60 ? Math.round(eta/60)+'h'+(eta%60)+'m' : eta+'m'} · ~0.15s/batch`;
+
+    // Per-epoch log (aligning with Ultralytics format)
+    appendLog(
+      `[${time}]  ${String(currentEpoch).padStart(4)}/${totalEpochs}  ` +
+      `${gpuMem}G  ` +
+      `box=${String(boxLoss).padEnd(10)} cls=${String(clsLoss).padEnd(10)} dfl=${String(dflLoss).padEnd(10)} ` +
+      `${String(inst).padEnd(14)} ` +
+      `${imgsz}:  100%|█| 48/48 [00:12<00:00]`,
+      'epoch'
+    );
+    appendLog(
+      `[${time}]            Class  Images  Instances    Box(P)       R      mAP50   mAP50-95`,
+      'valHeader'
+    );
+    appendLog(
+      `[${time}]              all    331      ${String(Math.floor(700 + Math.random()*100)).padEnd(12)} ${(mAP50-0.05).toFixed(3).padEnd(10)} ${(mAP50-0.03).toFixed(3).padEnd(8)} ${mAP50.toFixed(3).padEnd(8)} ${mAP5095.toFixed(3)}`,
+      'val'
+    );
+    appendLog('', 'blank');
+
+    drawLossChart();
+    drawMapChart();
+
+    // Every 100 epochs show a separator
+    if (currentEpoch % 100 === 0 && currentEpoch < totalEpochs) {
+      appendLog(`--- Epoch ${currentEpoch}/${totalEpochs} completed ---`, 'separator');
+      appendLog('', 'blank');
+    }
+
+    if (currentEpoch >= totalEpochs) {
+      finishTraining();
+    }
+  }, 120);
+}
+
+function pauseTraining() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('btnPause');
+  const status = document.getElementById('monitorStatus');
+  if (isPaused) {
+    btn.textContent = '继续';
+    status.innerHTML = '<span style="color:var(--warning);">● 已暂停</span>';
+    appendLog('--- 训练已暂停 ---', 'info');
+  } else {
+    btn.textContent = '暂停';
+    status.innerHTML = '<span style="color:var(--success);">● 运行中</span>';
+    appendLog('--- 训练继续 ---', 'info');
+  }
+}
+
+function stopTraining() {
+  showConfirmModal(
+    '终止训练',
+    '确定要终止当前训练吗？',
+    '终止后模型将保存为 last.pt，可后续恢复继续训练。',
+    doStopTraining
+  );
+}
+
+function doStopTraining() {
+  clearInterval(trainInterval);
+  isTraining = false;
+  const finalMap50 = mapData.mAP50.length > 0 ? Math.max(...mapData.mAP50).toFixed(3) : '-';
+  const finalMap5095 = mapData.mAP5095.length > 0 ? Math.max(...mapData.mAP5095).toFixed(3) : '-';
+  const projectName = document.querySelector('.page-header select').selectedOptions[0].text;
+  const trainPath = 'models/' + projectName + '/train/weights';
+
+  document.getElementById('monitorStatus').innerHTML = '<span style="color:var(--danger);">● 已终止</span>';
+  document.getElementById('btnPause').disabled = true;
+
+  appendLog('', 'blank');
+  appendLog('======================================================', 'separator');
+  appendLog('     训练手动终止 (epoch ' + currentEpoch + '/' + totalEpochs + ')', 'banner');
+  appendLog('======================================================', 'separator');
+  appendLog('', 'blank');
+  appendLog('Results saved to ' + trainPath, 'savePath');
+  appendLog('    best.pt  (历史最高精度 mAP@50: ' + finalMap50 + ')', 'savePath');
+  appendLog('    last.pt  (最后一轮模型 epoch ' + currentEpoch + ')', 'savePath');
+  appendLog('', 'blank');
+  appendLog('NOTE: 人为提前中止训练，best.pt 与 last.pt 不同', 'note');
+  appendLog('     best.pt → 历史迭代中精度最高的模型', 'note');
+  appendLog('     last.pt → 训练最后一次有效迭代模型', 'note');
+
+  addHistoryRow('手动终止', 'stopped');
+  showToast('训练已终止');
+}
+
+function finishTraining() {
+  clearInterval(trainInterval);
+  isTraining = false;
+  document.getElementById('monitorStatus').innerHTML = '<span style="color:var(--success);">● 已完成</span>';
+  document.getElementById('btnPause').disabled = true;
+
+  const finalMap50 = mapData.mAP50.length > 0 ? mapData.mAP50[mapData.mAP50.length-1].toFixed(3) : '0.000';
+  const finalMap5095 = mapData.mAP5095.length > 0 ? mapData.mAP5095[mapData.mAP5095.length-1].toFixed(3) : '0.000';
+  const finalBox = lossData.box.length > 0 ? lossData.box[lossData.box.length-1].toFixed(4) : '0.0000';
+  const finalCls = lossData.cls.length > 0 ? lossData.cls[lossData.cls.length-1].toFixed(4) : '0.0000';
+  const finalDfl = lossData.dfl.length > 0 ? lossData.dfl[lossData.dfl.length-1].toFixed(4) : '0.0000';
+  const projectName = document.querySelector('.page-header select').selectedOptions[0].text;
+  const trainPath = 'models/' + projectName + '/train/weights';
+
+  // Show result box
+  document.getElementById('resultBox').style.display = 'block';
+  document.getElementById('resultGrid').innerHTML = `
+    <div class="result-item"><div class="metric-value" style="color:var(--success);">${finalMap50}</div><div class="metric-label">mAP@50</div></div>
+    <div class="result-item"><div class="metric-value" style="color:var(--primary);">${finalMap5095}</div><div class="metric-label">mAP@50-95</div></div>
+    <div class="result-item"><div class="metric-value">${finalBox}</div><div class="metric-label">最终 box_loss</div></div>
+    <div class="result-item"><div class="metric-value">${totalEpochs}</div><div class="metric-label">训练轮数</div></div>
+  `;
+
+  // === Training Complete (aligning with PDF 图4-6) ===
+  appendLog('', 'blank');
+  appendLog('======================================================', 'separator');
+  appendLog('               Training Complete', 'banner');
+  appendLog('======================================================', 'separator');
+  appendLog('', 'blank');
+
+  // Final results table
+  appendLog('Final Results:', 'header');
+  appendLog('  box_loss:  ' + finalBox + '    cls_loss:  ' + finalCls + '    dfl_loss:  ' + finalDfl, 'result');
+  appendLog('  mAP@50:    ' + finalMap50 + '      mAP@50-95: ' + finalMap5095, 'result');
+  appendLog('', 'blank');
+
+  // Speed summary (aligning with PDF output format)
+  appendLog('Speed: 0.2ms preprocess, 3.4ms inference, 0.0ms loss, 0.4ms postprocess per image', 'speed');
+  appendLog('', 'blank');
+
+  // Results saved (aligning with PDF)
+  appendLog('Results saved to ' + trainPath, 'savePath');
+  appendLog('    best.pt  (best mAP@50: ' + finalMap50 + ')', 'savePath');
+  appendLog('    last.pt  (last epoch model)', 'savePath');
+  appendLog('', 'blank');
+  appendLog('NOTE: best.pt 与 last.pt 为同一文件（训练程序自行结束）', 'note');
+  appendLog('     若人为提前中止，best 为历史最高精度模型，last 为最后一轮有效模型', 'note');
+
+  addHistoryRow('已完成', 'done');
+  showToast('训练完成！mAP@50: ' + finalMap50);
+}
+
+function resetToConfig() {
+  document.getElementById('configView').style.display = 'block';
+  document.querySelector('.config-panel .card-header:first-of-type').style.display = 'flex';
+  document.getElementById('monitorHeader').style.display = 'none';
+  document.getElementById('monitorView').classList.remove('active');
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('btnPause').disabled = false;
+}
+
+function renderHistoryTable() {
+  var project = getProjectName(localStorage.getItem('current_project') || '');
+  var body = document.getElementById('historyBody');
+  body.innerHTML = '';
+  historyResults.forEach(function(r, idx) {
+    if (r.project !== project) return;
+    var mapClass = r.status === 'done' ? 'tag-success' : r.status === 'running' ? 'tag-processing' : 'tag-error';
+    var statusLabel = r.status === 'done' ? '已完成' : r.status === 'running' ? '进行中' : '已终止';
+    body.innerHTML +=
+      '<tr>' +
+      '<td>' + r.time + '</td>' +
+      '<td>' + r.project + '</td>' +
+      '<td>' + (r.taskName || '') + '</td>' +
+      '<td>train (' + r.train + ') / val (' + r.val + ')</td>' +
+      '<td>' + r.model + '</td>' +
+      '<td>' + r.epochs + '</td>' +
+      '<td style="color:var(--success);font-weight:600;">' + r.mAP50 + '</td>' +
+      '<td><span class="tag ' + mapClass + '">' + statusLabel + '</span></td>' +
+      '<td><button class="btn btn-text btn-sm" onclick="viewHistoryResult(' + idx + ')">查看</button> <button class="btn btn-text btn-sm" onclick="deleteHistoryRow(this)" style="color:var(--danger);">删除</button></td>' +
+      '</tr>';
+  });
+}
+
+function addHistoryRow(statusText, statusType) {
+  var now = new Date();
+  var timeStr = now.toISOString().slice(0, 16).replace('T', ' ');
+  var project = getProjectName(localStorage.getItem('current_project') || '');
+  var trainDS = getSelectedDatasets("trainDatasetWrap").join(', ');
+  var valDS = getSelectedDatasets("valDatasetWrap").join(', ');
+  var model = document.getElementById('pretrainedModel').value;
+  var finalMap50 = mapData.mAP50.length > 0 ? mapData.mAP50[mapData.mAP50.length-1].toFixed(3) : '-';
+  var finalMap5095 = mapData.mAP5095.length > 0 ? mapData.mAP5095[mapData.mAP5095.length-1].toFixed(3) : '-';
+
+  var taskName = document.getElementById('taskName').value.trim() || (project + '-' + model.replace('.pt','') + '-' + currentEpoch + 'e-' + document.getElementById('batch').value + 'b');
+  // Add to historyResults and reload
+  historyResults.unshift({
+    project: project, taskName: taskName, time: timeStr, model: model, epochs: String(currentEpoch),
+    train: trainDS, val: valDS, mAP50: finalMap50, mAP5095: finalMap5095,
+    status: statusType === 'done' ? 'done' : 'stopped', path: 'models/' + project + '/train/weights'
+  });
+  renderHistoryTable();
+}
+
+// ==================== CHARTS ====================
+function drawLossChart() {
+  const canvas = document.getElementById('lossChart');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const pad = { top: 20, right: 20, bottom: 30, left: 40 };
+  const pw = w - pad.left - pad.right;
+  const ph = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + ph * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#999'; ctx.font = '18px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'right'; ctx.fillText((0.10 - 0.025 * i).toFixed(2), pad.left - 8, y + 6);
+  }
+
+  if (lossData.epochs.length < 2) return;
+
+  function drawLine(data, color, maxVal) {
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.beginPath();
+    data.forEach((val, i) => {
+      const x = pad.left + (lossData.epochs[i] / totalEpochs) * pw;
+      const y = pad.top + (1 - val / maxVal) * ph;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  const maxLoss = 0.12;
+  drawLine(lossData.box, '#ff4d4f', maxLoss);
+  drawLine(lossData.cls, '#1890ff', maxLoss);
+  drawLine(lossData.dfl, '#52c41a', maxLoss);
+
+  // Legend
+  ctx.font = '20px ' + getComputedStyle(document.body).fontFamily;
+  [{text:'box_loss',color:'#ff4d4f'},{text:'cls_loss',color:'#1890ff'},{text:'dfl_loss',color:'#52c41a'}].forEach((l, i) => {
+    const lx = w - pad.right - 180 + i * 70;
+    ctx.fillStyle = l.color; ctx.fillRect(lx, pad.top, 14, 14);
+    ctx.fillStyle = '#666'; ctx.textAlign = 'left'; ctx.fillText(l.text, lx + 18, pad.top + 12);
+  });
+}
+
+function drawMapChart() {
+  const canvas = document.getElementById('mapChart');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const pad = { top: 20, right: 20, bottom: 30, left: 40 };
+  const pw = w - pad.left - pad.right;
+  const ph = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + ph * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#999'; ctx.font = '18px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'right'; ctx.fillText((1.0 - 0.25 * i).toFixed(2), pad.left - 8, y + 6);
+  }
+
+  if (mapData.epochs.length < 2) return;
+
+  [{data:mapData.mAP50,color:'#1890ff',label:'mAP@50'},{data:mapData.mAP5095,color:'#52c41a',label:'mAP@50-95'}].forEach(s => {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2;
+    ctx.beginPath();
+    s.data.forEach((val, i) => {
+      const x = pad.left + (mapData.epochs[i] / totalEpochs) * pw;
+      const y = pad.top + (1 - val) * ph;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  ctx.font = '20px ' + getComputedStyle(document.body).fontFamily;
+  [{text:'mAP@50',color:'#1890ff'},{text:'mAP@50-95',color:'#52c41a'}].forEach((l, i) => {
+    const lx = w - pad.right - 200 + i * 100;
+    ctx.fillStyle = l.color; ctx.fillRect(lx, pad.top, 14, 14);
+    ctx.fillStyle = '#666'; ctx.textAlign = 'left'; ctx.fillText(l.text, lx + 18, pad.top + 12);
+  });
+}
+
+// ==================== LOG ====================
+function appendLog(msg, type) {
+  const box = document.getElementById('logBox');
+  const clsMap = {
+    'banner': 'log-banner',
+    'header': 'log-header',
+    'cfg': 'log-cfg',
+    'dataInfo': 'log-dataInfo',
+    'info': 'log-time',
+    'epoch': 'log-epoch',
+    'val': 'log-val',
+    'valHeader': 'log-valHeader',
+    'separator': 'log-separator',
+    'result': 'log-result',
+    'speed': 'log-speed',
+    'savePath': 'log-savePath',
+    'note': 'log-note',
+  };
+  const cls = clsMap[type] || '';
+  if (type === 'blank') {
+    box.innerHTML += '\n';
+  } else {
+    box.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+// ==================== HISTORY MODAL ====================
+function openHistoryModal() {
+  document.getElementById('historyModal').style.display = 'flex';
+}
+function closeHistoryModal() {
+  document.getElementById('historyModal').style.display = 'none';
+}
+
+function viewHistoryResult(idx) {
+  const r = historyResults[idx];
+  document.getElementById('resultModalTitle').textContent = r.taskName + ' — ' + r.time;
+  document.getElementById('resultModalMetrics').innerHTML = `
+    <div class="result-item"><div class="metric-value" style="color:var(--success);">${r.mAP50}</div><div class="metric-label">mAP@50</div></div>
+    <div class="result-item"><div class="metric-value" style="color:var(--primary);">${r.mAP5095}</div><div class="metric-label">mAP@50-95</div></div>
+    <div class="result-item"><div class="metric-value">${r.train}</div><div class="metric-label">训练集</div></div>
+    <div class="result-item"><div class="metric-value">${r.val}</div><div class="metric-label">验证集</div></div>
+  `;
+  document.getElementById('resultModelPath').innerHTML = `best.pt · last.pt<br><span style="font-weight:400;">${r.path}</span>`;
+  document.getElementById('resultConfig').textContent = `${r.model} · epochs=${r.epochs} · batch=16 · imgsz=640 · optimizer=AdamW`;
+  document.getElementById('resultModal').style.display = 'flex';
+
+  // Draw static charts in modal
+  setTimeout(() => drawModalCharts(), 200);
+}
+
+function viewLatestResult() {
+  viewHistoryResult(0);
+}
+
+function deleteHistoryRow(btn) {
+  var row = btn.closest('tr');
+  showConfirmModal(
+    '删除训练记录',
+    '确定删除该训练记录吗？',
+    '对应的模型文件也将一并删除，此操作不可撤销。',
+    function() { if (row) row.remove(); }
+  );
+}
+
+function drawModalCharts() {
+  ['resultLossChart', 'resultMapChart'].forEach(id => {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = 280;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const pad = { top: 10, right: 20, bottom: 20, left: 35 };
+    const pw = w - pad.left - pad.right;
+    const ph = h - pad.top - pad.bottom;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + ph * i / 4;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    }
+
+    // Draw a nice mock curve
+    const colors = id === 'resultLossChart'
+      ? [{c:'#ff4d4f',s:0.08,e:0.018},{c:'#1890ff',s:0.05,e:0.008},{c:'#52c41a',s:0.03,e:0.006}]
+      : [{c:'#1890ff',s:0.3,e:0.87},{c:'#52c41a',s:0.15,e:0.65}];
+    colors.forEach(col => {
+      ctx.strokeStyle = col.c; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = pad.left + (i / 100) * pw;
+        const val = id === 'resultLossChart'
+          ? col.s * Math.pow(0.975, i/100*1000) + col.e + (Math.random()-0.5)*0.003
+          : col.s + (col.e - col.s) * (1 - Math.exp(-i/40)) + (Math.random()-0.5)*0.015;
+        const y = pad.top + (1 - val / (id === 'resultLossChart' ? 0.12 : 1)) * ph;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+  });
+}
+
+function closeResultModal() {
+  document.getElementById('resultModal').style.display = 'none';
+}
+
+// ==================== INIT ====================
+// Resize handler for canvases
+window.addEventListener('resize', () => {
+  if (isTraining) {
+    if (!isPaused) { drawLossChart(); drawMapChart(); }
+  }
+});
+
+(function() {
+  var user = getUser();
+  if (!user) { location.href = 'login.html'; return; }
+  document.getElementById('headerUserName').textContent = user.name;
+  document.getElementById('headerUserAvatar').textContent = user.avatar || user.name.charAt(0);
+
+  var project = localStorage.getItem('current_project'); if (!project) { location.href = 'projects.html'; return; } document.getElementById("sidebarProjectGroup").style.display = "block"; document.getElementById("sidebarSubPages").style.display = "block";
+  document.getElementById('sidebarProjectName').textContent = '当前算法：' + getProjectName(project);
+  updateTaskName();
+  renderHistoryTable();
+})();
+</script>
+</body>
+</html>

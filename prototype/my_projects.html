@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 个人算法</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { padding: 20px 24px; }
+  .page-header { margin-bottom: 20px; }
+  .page-header h2 { font-size: 20px; font-weight: 600; }
+
+  .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+
+  .project-card { background: var(--card-bg); border-radius: 8px; box-shadow: var(--card-shadow); padding: 20px 24px; transition: var(--transition); cursor: pointer; border: 1px solid transparent; }
+  .project-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(24,144,255,0.12); }
+  .project-card .p-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .project-card .p-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; color: #fff; }
+  .project-card .p-name { font-size: 16px; font-weight: 700; }
+  .project-card .p-date { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .pipeline { display: flex; align-items: center; gap: 0; margin-bottom: 16px; }
+  .pipeline .pipe-step { flex: 1; text-align: center; }
+  .pipeline .pipe-dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 auto 4px; }
+  .pipe-dot.done { background: var(--success); }
+  .pipe-dot.active { background: var(--primary); animation: pulse 1.5s infinite; }
+  .pipe-dot.wait { background: #e0e0e0; }
+  .pipeline .pipe-label { font-size: 10px; color: var(--text-muted); }
+  .pipeline .pipe-arrow { color: #d9d9d9; font-size: 10px; flex-shrink: 0; padding: 0 2px; margin-bottom: 14px; }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+  .p-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-bottom: 16px; }
+  .p-stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .p-stat-item .p-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .p-stat-item .p-stat-value { font-size: 12px; color: var(--text); font-weight: 600; }
+  .p-stat-item .p-stat-value.success { color: var(--success); }
+  .p-stat-item .p-stat-value.primary { color: var(--primary); }
+  .p-stat-item .p-stat-value.muted { color: var(--text-secondary); font-weight: 400; }
+
+  .empty-state { padding: 80px 20px; }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+  .tag-iterating { background: #f9f0ff; color: #722ed1; }
+
+  .modal { width: 400px; }
+  .modal-body { padding: 20px; }
+
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 12px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <div class="sidebar-group"><div class="sidebar-group-title">平台导航</div>
+      <a class="sidebar-item active" href="#" data-icon="📁">个人算法</a>
+      <a class="sidebar-item" href="projects.html" data-icon="👥">团队算法</a>
+      <a class="sidebar-item" href="models.html" data-icon="📊">模型总览</a>
+      <a class="sidebar-item" href="models_use.html" data-icon="🔍">模型使用</a>
+      <a class="sidebar-item" href="training_queue.html" data-icon="📋">训练队列</a>
+    </div>
+    <div class="sidebar-group"><div class="sidebar-group-title">系统设置</div>
+      <a class="sidebar-item" href="team_manage.html" data-icon="⚙">团队管理</a>
+      <a class="sidebar-item" href="profile.html" data-icon="👤">个人中心</a>
+    </div>
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb"><a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;" data-icon="🏠">首页</a> <span class="sep">›</span> <span>个人算法</span></div>
+    <div class="header-actions">
+            <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+    <div class="page-header">
+      <h2>个人算法</h2>
+      <button class="btn btn-primary" onclick="showNewProjectModal()">+ 新建算法</button>
+    </div>
+
+    <div class="project-grid" id="projectGrid">
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div>还没有个人算法</div>
+        <div style="font-size:12px;margin-top:4px;">点击上方「+ 新建算法」创建你的第一个算法</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="newProjectModal" style="display:none;" onclick="if(event.target==this)closeNewProjectModal()">
+  <div class="modal" style="width:400px;">
+    <div class="modal-header">
+      新建个人算法
+      <button class="modal-close" onclick="closeNewProjectModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 28px;">
+      <div class="form-group">
+        <label>算法名称</label>
+        <input type="text" id="newProjectName" placeholder="请输入算法名称" style="width:100%;" onkeydown="if(event.key==='Enter')createProject()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeNewProjectModal()">取消</button>
+      <button class="btn btn-primary btn-sm" onclick="createProject()">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Edit Project Modal -->
+<div class="modal-overlay" id="editProjectModal" style="display:none;" onclick="if(event.target==this)closeEditProjectModal()">
+  <div class="modal" style="width:440px;">
+    <div class="modal-header">
+      编辑算法
+      <button class="modal-close" onclick="closeEditProjectModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 28px;">
+      <input type="hidden" id="editProjectId">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>算法名称</label>
+        <input type="text" id="editProjectName" style="width:100%;padding:7px 10px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px;font-family:var(--font);">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>共享到团队</label>
+        <select id="editProjectTeam" style="width:100%;padding:7px 10px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px;font-family:var(--font);">
+          <option value="">— 不共享（仅个人） —</option>
+        </select>
+      </div>
+      <div id="newTeamSection" style="display:none;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="newTeamName" placeholder="输入新团队名称" style="flex:1;padding:7px 10px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px;font-family:var(--font);">
+          <button class="btn btn-primary btn-sm" onclick="createNewTeam()">创建</button>
+        </div>
+      </div>
+      <button class="btn btn-text btn-sm" id="btnShowNewTeam" onclick="showNewTeamInput()" style="color:var(--primary);">+ 新建团队</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeEditProjectModal()">取消</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEditProject()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteProjectModal" style="display:none;" onclick="if(event.target==this)closeDeleteProjectModal()">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      确认删除算法
+      <button class="modal-close" onclick="closeDeleteProjectModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="deleteProjectId">
+      <div style="margin-bottom:12px;font-size:13px;">确定要删除算法「<strong id="deleteProjectName"></strong>」吗？此操作<strong>不可撤销</strong>，请手动输入算法名称确认：</div>
+      <input type="text" id="deleteInputName" placeholder="请输入算法名称以确认删除" style="width:100%;padding:8px 12px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px;font-family:var(--font);margin-bottom:12px;outline:none;" oninput="checkDeleteInput()">
+      <div style="background:#fff1f0;border:1px solid #ffccc7;border-radius:4px;padding:12px;font-size:12px;">
+        <strong>以下内容将被一并删除：</strong><br>
+        &emsp;→ 该算法下的全部数据集<br>
+        &emsp;→ 全部标注数据<br>
+        &emsp;→ 全部训练记录和模型文件<br>
+        &emsp;→ 全部评估记录<br>
+        &emsp;→ 全部部署记录和部署包
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeDeleteProjectModal()">取消</button>
+      <button class="btn btn-danger btn-sm" onclick="executeDeletePersonalProject()" id="btnConfirmDelete" disabled>确认删除</button>
+    </div>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+var PERSONAL_KEY = 'personal_projects';
+
+function getPersonalProjects() {
+  try { return JSON.parse(localStorage.getItem(PERSONAL_KEY)) || []; } catch(e) { return []; }
+}
+
+function savePersonalProjects(projects) {
+  localStorage.setItem(PERSONAL_KEY, JSON.stringify(projects));
+}
+
+function getProjDataStatus(projectName) {
+  var datasets = [];
+  try { datasets = JSON.parse(localStorage.getItem('platform_datasets')) || []; } catch(e) {}
+  var pipeStatus = {};
+  try { pipeStatus = JSON.parse(localStorage.getItem('pipeline_annotation_status')) || {}; } catch(e) {}
+  var models = [];
+  try { models = JSON.parse(localStorage.getItem('platform_models')) || []; } catch(e) {}
+
+  // Filter datasets by project
+  datasets = datasets.filter(function(b) { return b.project === projectName; });
+
+  // Check which stages have data
+  var hasData = { files: false, extracted: false, dedup: false, labeled: false, train: false, val: false };
+  datasets.forEach(function(b) {
+    b.children.forEach(function(c) {
+      if (c.key.indexOf('raw_videos') === 0) hasData.files = true;
+      if (c.key.indexOf('extracted') === 0) hasData.extracted = true;
+      if (c.key.indexOf('deduplicated') === 0) hasData.dedup = true;
+      if (c.key.indexOf('labeled') === 0) hasData.labeled = true;
+      if (c.key.indexOf('train') === 0) hasData.train = true;
+      if (c.key.indexOf('val') === 0) hasData.val = true;
+    });
+  });
+
+  // Check if ANY deduplicated has annotation in progress
+  var dedupKeys = [];
+  datasets.forEach(function(b) {
+    b.children.forEach(function(c) {
+      if (c.key.indexOf('deduplicated') === 0) dedupKeys.push(c.key);
+    });
+  });
+  var hasRunning = false;
+  dedupKeys.forEach(function(key) {
+    var suffix = key.replace('deduplicated', '') || '_01';
+    var st = pipeStatus['p' + suffix] || '';
+    if (st === 'in_progress' || st === 'review') hasRunning = true;
+  });
+
+  // Check models for this project
+  var projModels = models.filter(function(m) { return m.project === projectName; });
+  var hasModel = projModels.length > 0;
+  var hasEval = projModels.some(function(m) { return m.mAP50 && m.mAP50 !== '-'; });
+  var hasDeploy = projModels.some(function(m) { return m.inUse; });
+
+  // Determine stage label
+  var stageLabel, stageClass;
+  if (hasDeploy) { stageLabel = '迭代中'; stageClass = 'tag-iterating'; }
+  else if (hasEval) { stageLabel = '已完成'; stageClass = 'tag-success'; }
+  else if (hasModel) { stageLabel = '训练中'; stageClass = 'tag-processing'; }
+  else if (hasRunning) { stageLabel = '标注中'; stageClass = 'tag-processing'; }
+  else if (hasData.dedup) { stageLabel = '待标注'; stageClass = 'tag-warning'; }
+  else if (hasData.files) { stageLabel = '数据准备'; stageClass = 'tag-warning'; }
+  else { stageLabel = '待开始'; stageClass = 'tag-warning'; }
+
+  // Pipeline dots: data→标注→训练→评估→部署→迭代
+  var pipe = [];
+  pipe.push(hasData.files ? 'done' : 'wait');           // 数据
+  pipe.push(hasData.dedup ? (hasRunning ? 'active' : 'done') : 'wait');  // 标注
+  pipe.push(hasModel ? 'done' : 'wait');                  // 训练
+  pipe.push(hasEval ? 'done' : 'wait');                   // 评估
+  pipe.push(hasDeploy ? 'done' : 'wait');                 // 部署
+  pipe.push(hasDeploy ? 'active' : 'wait');               // 迭代
+
+  return { stageLabel: stageLabel, stageClass: stageClass, pipe: pipe };
+}
+
+function onTeamFilter() {
+  renderAllProjects();
+}
+
+// ── Compute project stats dynamically ──
+function computeProjectStats(projectName) {
+  var datasets = [];
+  try { datasets = JSON.parse(localStorage.getItem('platform_datasets')) || []; } catch(e) {}
+  var pipeStatus = {};
+  try { pipeStatus = JSON.parse(localStorage.getItem('pipeline_annotation_status')) || {}; } catch(e) {}
+  var models = [];
+  try { models = JSON.parse(localStorage.getItem('platform_models')) || []; } catch(e) {}
+
+  // Filter datasets by project
+  datasets = datasets.filter(function(b) { return b.project === projectName; });
+  // Count batches & total deduplicated images
+  var batchCount = datasets.length;
+  var totalDedupImgs = 0;
+  var dedupKeys = [];  // collect deduplicated keys for status check
+  datasets.forEach(function(b) {
+    b.children.forEach(function(c) {
+      if (c.key.indexOf('deduplicated') === 0) {
+        var match = c.count.match(/(\d[\d,]*)/);
+        if (match) totalDedupImgs += parseInt(match[1].replace(/,/g, ''));
+        dedupKeys.push(c.key);
+      }
+    });
+  });
+
+  // Annotation status aggregation
+  var annoDone = 0, annoPending = 0, annoReview = 0;
+  dedupKeys.forEach(function(key) {
+    var suffix = key.replace('deduplicated', '') || '_01';
+    var status = pipeStatus['p' + suffix] || '';
+    if (status === 'review') annoReview++;
+    else if (status === 'in_progress') annoPending++;
+    else {
+      // Check if labeled exists downstream → done
+      var hasLabeled = false;
+      datasets.forEach(function(b) {
+        b.children.forEach(function(c) {
+          if (c.key.indexOf('labeled') === 0 && c.key.replace('labeled','') === key.replace('deduplicated','')) {
+            hasLabeled = true;
+          }
+        });
+      });
+      if (hasLabeled) annoDone++;
+    }
+  });
+  var annoTotal = dedupKeys.length;
+
+  // Model stats — find best model for this project
+  var projModels = models.filter(function(m) { return m.project === projectName; });
+  var bestModel = null;
+  var inUseModel = projModels.filter(function(m) { return m.inUse; })[0];
+  if (inUseModel) {
+    bestModel = inUseModel;
+  } else {
+    // Find one with highest mAP
+    projModels.forEach(function(m) {
+      if (m.mAP50 && (!bestModel || parseFloat(m.mAP50) > parseFloat(bestModel.mAP50 || '0'))) {
+        bestModel = m;
+      }
+    });
+  }
+
+  // Build stats as structured items for grid display
+  var items = [];
+
+  // Model + mAP (top-left)
+  if (bestModel) {
+    items.push('<div class="p-stat-item"><div class="p-stat-label">模型</div><div class="p-stat-value">' + bestModel.model + ' ' + bestModel.version + '</div></div>');
+    items.push('<div class="p-stat-item"><div class="p-stat-label">mAP@50</div><div class="p-stat-value success">' + (bestModel.mAP50 || '—') + '</div></div>');
+  } else {
+    items.push('<div class="p-stat-item"><div class="p-stat-label">模型</div><div class="p-stat-value muted">暂无</div></div>');
+    items.push('<div class="p-stat-item"><div class="p-stat-label">mAP@50</div><div class="p-stat-value muted">—</div></div>');
+  }
+
+  // Dataset (bottom-left)
+  var dsVal = batchCount > 0 ? batchCount + ' 批次 · ' + totalDedupImgs.toLocaleString() + ' 张' : '暂无数据';
+  items.push('<div class="p-stat-item"><div class="p-stat-label">数据集</div><div class="p-stat-value">' + dsVal + '</div></div>');
+
+  // Annotation (bottom-right)
+  var annoHtml;
+  if (annoTotal > 0) {
+    var annoParts = [];
+    if (annoDone > 0) annoParts.push('<span style="color:var(--success);font-weight:600;">' + annoDone + '</span> 完成');
+    if (annoReview > 0) annoParts.push('<span style="color:#eb2f96;font-weight:600;">' + annoReview + '</span> 待审');
+    if (annoPending > 0) annoParts.push('<span style="color:var(--primary);font-weight:600;">' + annoPending + '</span> 进行中');
+    var untouched = annoTotal - annoDone - annoReview - annoPending;
+    if (untouched > 0) annoParts.push('<span style="color:var(--text-muted);">' + untouched + '</span> 未开始');
+    annoHtml = annoParts.join(' · ');
+  } else {
+    annoHtml = '<span style="color:var(--text-muted);">暂无</span>';
+  }
+  items.push('<div class="p-stat-item"><div class="p-stat-label">标注</div><div class="p-stat-value" style="font-size:11px;">' + annoHtml + '</div></div>');
+
+  return items.join('');
+}
+
+function renderProjects() {
+  var projects = getPersonalProjects();
+  var grid = document.getElementById('projectGrid');
+  var empty = document.getElementById('emptyState');
+  grid.querySelectorAll('.project-card').forEach(function(c) { c.remove(); });
+
+  if (projects.length === 0) {
+    empty.style.display = 'block';
+    grid.style.display = 'flex';
+    grid.style.alignItems = 'center';
+    grid.style.justifyContent = 'center';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+  grid.style.alignItems = '';
+  grid.style.justifyContent = '';
+
+  projects.forEach(function(p) {
+    var isShared = p._shared || false;
+    // 共享标记放在项目名旁边
+    var shareLabel = isShared
+      ? '<span class="tag" style="background:#e6f7ff;color:#1890ff;margin-left:6px;">共享</span>'
+      : '';
+    // 状态标记放右上角
+    var projStats = getProjDataStatus(p.name);
+    var stageTag = '<span class="tag ' + projStats.stageClass + '" style="margin-left:auto;">' + projStats.stageLabel + '</span>';
+    var pipeLabels = ['数据','标注','训练','评估','部署','迭代'];
+    var pipelineHtml = '';
+    for (var k = 0; k < 6; k++) {
+      pipelineHtml += '<div class="pipe-step"><div class="pipe-dot ' + projStats.pipe[k] + '"></div><div class="pipe-label">' + pipeLabels[k] + '</div></div>';
+      if (k < 5) pipelineHtml += '<div class="pipe-arrow">→</div>';
+    }
+    var statsHtml = computeProjectStats(p.name);
+    var buttonsHtml =
+      '<div style="display:flex;gap:6px;justify-content:space-between;">' +
+        '<button class="btn btn-default btn-sm" onclick="event.stopPropagation();enterProject(\'' + p.id + '\')">进入算法</button>' +
+        '<span>' +
+          '<button class="btn btn-default btn-sm" onclick="event.stopPropagation();openEditProjectModal(\'' + p.id + '\')">编辑</button>' +
+          '<button class="btn btn-danger btn-sm" style="margin-left:6px;" onclick="event.stopPropagation();deletePersonalProject(\'' + p.id + '\',\'' + p.name + '\')">删除</button>' +
+        '</span>' +
+      '</div>';
+
+    var card = document.createElement('div');
+    card.className = 'project-card';
+    card.onclick = function() { enterProject(p.id); };
+    card.innerHTML =
+      '<div class="p-header">' +
+        '<div class="p-icon" style="background:linear-gradient(135deg,' + getCardColor(p.id) + ');">' + p.name.charAt(0) + '</div>' +
+        '<div>' +
+          '<div class="p-name">' + p.name + shareLabel + '</div>' +
+          '<div class="p-date">创建于 ' + p.createdAt + '</div>' +
+        '</div>' +
+        stageTag +
+      '</div>' +
+      '<div class="pipeline">' + pipelineHtml + '</div>' +
+      '<div class="p-stats">' + statsHtml + '</div>' +
+      buttonsHtml;
+    grid.appendChild(card);
+  });
+}
+
+function getCardColor(id) {
+  var colors = ['#1890ff,#36cfc9','#fa8c16,#f5222d','#722ed1,#eb2f96','#52c41a,#13c2c2','#2f54eb,#a0d911'];
+  var idx = (id.charCodeAt(5) || 0) % colors.length;
+  return colors[idx];
+}
+
+function getTeams() {
+  try { return JSON.parse(localStorage.getItem('platform_teams')) || []; } catch(e) { return []; }
+}
+
+function initTeams() {
+  var teams = getTeams();
+  var needsSave = false;
+  teams.forEach(function(t) {
+    if (!t.owner) { t.owner = 'admin'; needsSave = true; }
+    if (!t.members || t.members.length === 0) { needsSave = true; }
+  });
+  if (teams.length === 0 || needsSave) {
+    teams = [
+      { id: 'team_anbao', name: '安保检测组', createdAt: '2026-05-01', owner: 'admin', members: [
+        { username: 'admin', role: 'owner', permission: 'write', joinedAt: '2026-05-01' },
+        { username: '张三', role: 'admin', permission: 'write', joinedAt: '2026-06-10' },
+      ]},
+      { id: 'team_xiaofang', name: '消防安全组', createdAt: '2026-06-01', owner: '张三', members: [
+        { username: '张三', role: 'owner', permission: 'write', joinedAt: '2026-06-01' },
+        { username: 'admin', role: 'member', permission: 'read', joinedAt: '2026-06-15' },
+      ]},
+      { id: 'team_default', name: '默认团队', createdAt: '2026-04-01', owner: 'admin', members: [
+        { username: 'admin', role: 'owner', permission: 'write', joinedAt: '2026-04-01' },
+        { username: '张三', role: 'member', permission: 'write', joinedAt: '2026-04-10' },
+      ]},
+    ];
+    localStorage.setItem('platform_teams', JSON.stringify(teams));
+  }
+}
+
+// ── Edit project modal ──
+function openEditProjectModal(id) {
+  var personal = getPersonalProjects();
+  var p = personal.find(function(proj) { return proj.id === id; });
+  if (!p) return;
+  document.getElementById('editProjectId').value = id;
+  document.getElementById('editProjectName').value = p.name;
+  // Populate team dropdown
+  var sel = document.getElementById('editProjectTeam');
+  sel.innerHTML = '<option value="">— 不共享（仅个人） —</option>';
+  getTeams().forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    sel.appendChild(opt);
+  });
+  sel.value = (p._shared && p.teamId) ? p.teamId : '';
+  // Reset new team section
+  document.getElementById('newTeamSection').style.display = 'none';
+  document.getElementById('newTeamName').value = '';
+  document.getElementById('btnShowNewTeam').style.display = 'inline-flex';
+  document.getElementById('editProjectModal').style.display = 'flex';
+}
+
+function closeEditProjectModal() {
+  document.getElementById('editProjectModal').style.display = 'none';
+}
+
+function showNewTeamInput() {
+  document.getElementById('newTeamSection').style.display = 'block';
+  document.getElementById('btnShowNewTeam').style.display = 'none';
+  document.getElementById('newTeamName').focus();
+}
+
+function createNewTeam() {
+  var name = document.getElementById('newTeamName').value.trim();
+  if (!name) { showToast('请输入团队名称'); return; }
+  var user = getUser();
+  var username = user ? user.username : 'admin';
+  var teams = getTeams();
+  var newId = 'team_' + Date.now();
+  teams.push({
+    id: newId, name: name, createdAt: new Date().toISOString().slice(0,10),
+    owner: username,
+    members: [{ username: username, role: 'owner', joinedAt: new Date().toISOString().slice(0,10) }]
+  });
+  localStorage.setItem('platform_teams', JSON.stringify(teams));
+  // Add to dropdown and select it
+  var sel = document.getElementById('editProjectTeam');
+  var opt = document.createElement('option');
+  opt.value = newId;
+  opt.textContent = name;
+  sel.appendChild(opt);
+  sel.value = newId;
+  // Reset
+  document.getElementById('newTeamSection').style.display = 'none';
+  document.getElementById('newTeamName').value = '';
+  document.getElementById('btnShowNewTeam').style.display = 'inline-flex';
+  showToast('团队「' + name + '」已创建');
+}
+
+function saveEditProject() {
+  var id = document.getElementById('editProjectId').value;
+  var name = document.getElementById('editProjectName').value.trim();
+  var teamId = document.getElementById('editProjectTeam').value;
+  if (!name) { showToast('请输入算法名称'); return; }
+
+  var personal = getPersonalProjects();
+  var project = personal.find(function(p) { return p.id === id; });
+  if (!project) return;
+  project.name = name;
+
+  // Handle team sharing
+  var team = JSON.parse(localStorage.getItem('project_list') || '[]');
+  // Remove from any previous team
+  team = team.filter(function(p) { return p.id !== id; });
+
+  if (teamId) {
+    project._shared = true;
+    project.teamId = teamId;
+    // Add to team project list (or update)
+    team.push({ id: id, name: name, createdAt: project.createdAt, teamId: teamId, _fromPersonal: true });
+    localStorage.setItem('project_list', JSON.stringify(team));
+    showToast('「' + name + '」已共享');
+  } else {
+    project._shared = false;
+    project.teamId = '';
+    localStorage.setItem('project_list', JSON.stringify(team));
+    showToast('「' + name + '」已保存');
+  }
+  savePersonalProjects(personal);
+  closeEditProjectModal();
+  renderProjects();
+}
+
+function showNewProjectModal() {
+  document.getElementById('newProjectModal').style.display = 'flex';
+  document.getElementById('newProjectName').focus();
+}
+
+function closeNewProjectModal() {
+  document.getElementById('newProjectModal').style.display = 'none';
+  document.getElementById('newProjectName').value = '';
+}
+
+function createProject() {
+  var name = document.getElementById('newProjectName').value.trim();
+  if (!name) { showToast('请输入算法名称'); return; }
+  var projects = getPersonalProjects();
+  var id = 'my_' + Date.now();
+  projects.push({ id: id, name: name, createdAt: new Date().toISOString().slice(0,10) });
+  savePersonalProjects(projects);
+  localStorage.setItem('current_project', id);
+  location.href = 'data_center.html';
+}
+
+function enterProject(id) {
+  localStorage.setItem('current_project', id);
+  location.href = 'data_center.html';
+}
+
+function deletePersonalProject(id, name) {
+  document.getElementById('deleteProjectId').value = id;
+  document.getElementById('deleteProjectName').textContent = name;
+  document.getElementById('deleteInputName').value = '';
+  document.getElementById('btnConfirmDelete').disabled = true;
+  document.getElementById('deleteProjectModal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('deleteInputName').focus(); }, 100);
+}
+
+function checkDeleteInput() {
+  var inputName = document.getElementById('deleteInputName').value.trim();
+  var projectName = document.getElementById('deleteProjectName').textContent;
+  document.getElementById('btnConfirmDelete').disabled = (inputName !== projectName);
+}
+
+function closeDeleteProjectModal() {
+  document.getElementById('deleteProjectModal').style.display = 'none';
+}
+
+function executeDeletePersonalProject() {
+  var id = document.getElementById('deleteProjectId').value;
+  var name = document.getElementById('deleteProjectName').textContent;
+  var inputName = document.getElementById('deleteInputName').value.trim();
+  if (inputName !== name) { showToast('算法名称不匹配，无法删除'); return; }
+  var personal = getPersonalProjects();
+  personal = personal.filter(function(p) { return p.id !== id; });
+  savePersonalProjects(personal);
+  var team = JSON.parse(localStorage.getItem('project_list') || '[]');
+  team = team.filter(function(p) { return p.id !== id; });
+  localStorage.setItem('project_list', JSON.stringify(team));
+  closeDeleteProjectModal();
+  renderProjects();
+  showToast('项目「' + name + '」已删除');
+}
+
+function initDefaultData() {
+  if (!localStorage.getItem('platform_datasets')) {
+    localStorage.setItem('platform_datasets', JSON.stringify([
+      { project:'保安服检测', batch:'上传批次_20260628', batchDate:'2026-06-28', status:'已完成', statusClass:'tag-success', children: [
+        { key:'raw_videos', name:'files/', count:'4 个文件', dateText:'2026-06-28 上传', icon:'raw', iconGlyph:'▶', badge:'原始数据', badgeClass:'done' },
+        { key:'extracted', name:'extracted_frames/', count:'1,248 张', dateText:'2026-06-29 生成', icon:'raw', iconGlyph:'▣', badge:'已处理', badgeClass:'done' },
+        { key:'deduplicated', name:'deduplicated/', count:'1,102 张', dateText:'2026-06-30 生成', icon:'dedup', iconGlyph:'▦', badge:'已标注', badgeClass:'done' },
+        { key:'labeled', name:'labeled/', count:'1,102 张', dateText:'2026-07-02 标注完成', icon:'labeled', iconGlyph:'▣', badge:'已标注', badgeClass:'done' },
+        { key:'train', name:'train/', count:'771 张 + 标签', dateText:'2026-07-03 生成', icon:'train', iconGlyph:'⊞', badge:'训练集', badgeClass:'done' },
+        { key:'val', name:'val/', count:'331 张 + 标签', dateText:'2026-07-03 生成', icon:'val', iconGlyph:'◇', badge:'验证集', badgeClass:'done' },
+      ]},
+      { project:'烟火检测', batch:'上传批次_20260701', batchDate:'2026-07-01', status:'标注中', statusClass:'tag-processing', children: [
+        { key:'raw_videos_02', name:'files/', count:'3 个文件', dateText:'2026-07-01 上传', icon:'raw', iconGlyph:'▶', badge:'原始数据', badgeClass:'done' },
+        { key:'extracted_02', name:'extracted_frames/', count:'920 张', dateText:'2026-07-01 生成', icon:'raw', iconGlyph:'▣', badge:'已处理', badgeClass:'done' },
+        { key:'deduplicated_02', name:'deduplicated/', count:'856 张', dateText:'2026-07-02 生成', icon:'dedup', iconGlyph:'▦', badge:'标注中 47/200', badgeClass:'processing', badgeId:'dedupBadge02' },
+      ]},
+      { project:'安全帽检测', batch:'上传批次_20260702', batchDate:'2026-07-02', status:'未标注', statusClass:'tag-default', children: [
+        { key:'raw_videos_03', name:'files/', count:'6 个文件', dateText:'2026-07-02 上传', icon:'raw', iconGlyph:'▶', badge:'原始数据', badgeClass:'done' },
+        { key:'extracted_03', name:'extracted_frames/', count:'1,650 张', dateText:'2026-07-03 生成', icon:'raw', iconGlyph:'▣', badge:'已处理', badgeClass:'done' },
+        { key:'deduplicated_03', name:'deduplicated/', count:'1,517 张', dateText:'2026-07-03 生成', icon:'dedup', iconGlyph:'▦', badge:'已去重', badgeClass:'done', badgeId:'dedupBadge03' },
+      ]}
+    ]));
+  }
+  if (!localStorage.getItem('platform_models')) {
+    localStorage.setItem('platform_models', JSON.stringify([
+      { id: 1, project: '保安服检测', time: '2026-07-02 15:30', model: 'best.pt', version: 'v1.3.0', epochs: 800, mAP50: '0.872', mAP5095: '0.651', inUse: true, pretrained: 'yolo11m.pt', size: '12.8 MB', notes: '', stage: '已完成' },
+      { id: 2, project: '保安服检测', time: '2026-06-28 09:15', model: 'best.pt', version: 'v1.2.0', epochs: 500, mAP50: '0.851', mAP5095: '0.624', inUse: false, pretrained: 'yolo11m.pt', size: '12.7 MB', notes: '检测精度略有下降', stage: '已完成' },
+      { id: 3, project: '保安服检测', time: '2026-06-20 14:00', model: 'last.pt', version: 'v1.1.0', epochs: 500, mAP50: '0.813', mAP5095: '0.587', inUse: false, pretrained: 'yolo11n.pt', size: '5.9 MB', notes: '', stage: '已终止' },
+      { id: 4, project: '烟火检测', time: '2026-07-05 10:20', model: 'best.pt', version: 'v2.0.0', epochs: 1000, mAP50: '0.918', mAP5095: '0.734', inUse: false, pretrained: 'yolo11m.pt', size: '12.9 MB', notes: '误报率偏高，需调整阈值', stage: '训练中' },
+      { id: 5, project: '烟火检测', time: '2026-06-30 16:45', model: 'best.pt', version: 'v1.0.0', epochs: 600, mAP50: '0.886', mAP5095: '0.691', inUse: false, pretrained: 'yolo11m.pt', size: '12.8 MB', notes: '', stage: '已完成' },
+      { id: 6, project: '安全帽检测', time: '2026-07-08 11:00', model: 'best.pt', version: 'v1.0.0', epochs: 800, mAP50: '0.835', mAP5095: '0.612', inUse: true, pretrained: 'yolo11m.pt', size: '12.8 MB', notes: '', stage: '已完成' },
+      { id: 7, project: '安全帽检测', time: '2026-06-20 14:00', model: 'best.pt', version: 'v0.5.0', epochs: 500, mAP50: '0.784', mAP5095: '0.543', inUse: false, pretrained: 'yolo11n.pt', size: '5.9 MB', notes: '', stage: '已终止' },
+    ]));
+  }
+  if (!localStorage.getItem('pipeline_annotation_status')) {
+    localStorage.setItem('pipeline_annotation_status', JSON.stringify({ p_02: 'in_progress' }));
+  }
+}
+
+(function() {
+  var user = getUser();
+  if (!user) { location.href = 'login.html'; return; }
+  document.getElementById('headerUserName').textContent = user.name;
+  document.getElementById('headerUserAvatar').textContent = user.avatar || user.name.charAt(0);
+  initTeams();
+  initDefaultData();
+  localStorage.removeItem('current_project');
+  renderProjects();
+})();
+
+</script>
+</body>
+</html>

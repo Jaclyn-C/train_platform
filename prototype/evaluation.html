@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 模型评估</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 16px 20px; gap: 16px; }
+
+  .eval-layout { flex: 1; display: flex; gap: 12px; min-height: 0; }
+
+  .card { display: flex; flex-direction: column; }
+  .card-header { flex-shrink: 0; }
+  .card-body { overflow-y: auto; flex: 1; }
+
+  .config-panel { width: 330px; min-width: 330px; }
+  .result-panel { flex: 1; min-width: 0; }
+
+  .form-section { margin-bottom: 18px; }
+  .form-section:last-child { margin-bottom: 0; }
+  .form-section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .form-group { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-group label { font-size: 11px; color: var(--text-secondary); }
+  .form-group select, .form-group input { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; font-family: var(--font); height: 32px; box-sizing: border-box; }
+  .form-group .hint { font-size: 10px; color: var(--text-muted); }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .metric-card { background: #fafafa; border-radius: var(--radius); padding: 14px 16px; text-align: center; border: 1px solid var(--border); }
+  .metric-card .metric-value { font-size: 22px; font-weight: 700; }
+  .metric-card .metric-label { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+  .chart-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+  .chart-box .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-secondary); }
+  .chart-box canvas { width: 100%; height: 200px; display: block; }
+
+  .img-gallery { overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
+  .img-gallery::-webkit-scrollbar { height: 6px; }
+  .img-gallery::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 3px; }
+  .img-gallery::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 3px; }
+  .img-gallery-row { display: flex; gap: 12px; }
+  .img-card { flex-shrink: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #fff; cursor: pointer; transition: var(--transition); }
+  .img-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(24,144,255,0.15); }
+  .img-card .img-card-label { font-size: 11px; color: var(--text-secondary); padding: 6px 10px; background: #fafafa; border-bottom: 1px solid var(--border); text-align: center; }
+  .img-card img { display: block; height: 200px; width: auto; }
+
+  .lightbox { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+  .lightbox img { max-width: 90vw; max-height: 80vh; }
+  .lightbox .lightbox-close { position: absolute; top: 20px; right: 30px; font-size: 32px; color: #fff; cursor: pointer; }
+  .lightbox .lightbox-download { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); }
+  .lightbox .lightbox-name { position: absolute; top: 20px; left: 30px; color: #fff; font-size: 14px; }
+
+  .empty-state { padding: 60px 20px; }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* ===== Multi-Select ===== */
+  .multi-select { position: relative; user-select: none; }
+  .ms-trigger { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; background: #fff; cursor: pointer; min-height: 32px; box-sizing: border-box; }
+  .ms-trigger:hover { border-color: var(--primary); }
+  .ms-trigger .ms-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .ms-trigger .ms-arrow { color: var(--text-muted); font-size: 10px; margin-left: 6px; flex-shrink: 0; }
+  .multi-select.open .ms-trigger { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(24,144,255,0.15); }
+  .ms-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d9d9d9; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; max-height: 180px; overflow-y: auto; margin-top: 2px; }
+  .multi-select.open .ms-dropdown { display: block; }
+  .ms-option { display: flex; align-items: center; gap: 6px; padding: 7px 10px; font-size: 12px; cursor: pointer; transition: var(--transition); margin: 0; font-weight: 400; }
+  .ms-option:hover { background: var(--primary-light); }
+  .ms-option input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; margin: 0; flex-shrink: 0; }
+  .ms-trigger .ms-placeholder { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-group" id="sidebarTopHome"><a class="sidebar-item" id="sidebarHomeLink" href="my_projects.html" data-icon="🏠">首页</a></div>
+    <div class="sidebar-group" id="sidebarProjectGroup" style="display:none;">
+      <div class="sidebar-group-title" style="font-size:13px;color:#fff;font-weight:600;text-transform:none;opacity:1;" id="sidebarProjectName">当前算法：—</div>
+    </div>
+    <div class="sidebar-group" id="sidebarSubPages" style="display:none;">
+      <a class="sidebar-item" href="data_center.html" data-icon="📦">数据中心</a>
+      <a class="sidebar-item" href="annotation.html" data-icon="🏷">数据标注</a>
+      <a class="sidebar-item" href="training.html" data-icon="🏋">模型训练</a>
+      <a class="sidebar-item active" href="#" data-icon="📈">模型评估</a>
+      <a class="sidebar-item" href="trial.html" data-icon="🧪">模型试用</a>
+      <a class="sidebar-item" href="deployment.html" data-icon="🚀">模型部署</a>
+    </div>
+
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb">
+      <a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;">首页</a> <span class="sep">›</span> <span>模型评估</span>
+    </div>
+    <div class="header-actions">
+            <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html" data-icon="👤">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+    <div class="page-header">
+      <h2>模型评估</h2>
+    </div>
+
+    <div class="eval-layout">
+
+      <!-- Left: Config + History -->
+      <div class="config-panel" style="display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Config Card -->
+        <div class="card">
+          <div class="card-header">评估配置</div>
+          <div class="card-body">
+            <div class="form-section">
+              <div class="form-section-title">模型选择</div>
+              <div class="form-group">
+                <label>模型版本</label>
+                <select id="evalModel">
+                  <option value="">— 选择已训练的模型 —</option>
+                  <option value="best_v1.3" selected>best.pt — v1.3.0 (保安检测, mAP@50 0.872)</option>
+                  <option value="best_v1.2">best.pt — v1.2.0 (保安检测, mAP@50 0.851)</option>
+                  <option value="last_v1.3">last.pt — v1.3.0 (保安检测)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">测试数据</div>
+              <div class="form-group">
+                <label>测试数据集</label>
+                <div class="multi-select" id="evalDatasetWrap">
+                  <div class="ms-trigger" onclick="toggleMultiSelect('evalDatasetWrap')">
+                    <span class="ms-text" id="evalDatasetText">上传批次_20260628 val/ (331 张，YOLO 格式)</span>
+                    <span class="ms-arrow">▾</span>
+                  </div>
+                  <div class="ms-dropdown">
+                    <label class="ms-option"><input type="checkbox" value="val_01" checked onchange="updateMultiSelect('evalDatasetWrap')"> 上传批次_20260628 val/ (331 张，YOLO 格式)</label>
+                    <label class="ms-option"><input type="checkbox" value="train_01" onchange="updateMultiSelect('evalDatasetWrap')"> 上传批次_20260628 train/ (771 张，YOLO 格式)</label>
+                    <label class="ms-option"><input type="checkbox" value="val_02" onchange="updateMultiSelect('evalDatasetWrap')"> 上传批次_20260701 val/ (279 张，YOLO 格式)</label>
+                    <label class="ms-option"><input type="checkbox" value="val_03" onchange="updateMultiSelect('evalDatasetWrap')"> 上传批次_20260702 val/ (223 张，YOLO 格式)</label>
+                  </div>
+                </div>
+                <span class="hint">选择已标注的测试集，计算 mAP 等指标（可多选）</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%;" onclick="startEval()" id="btnEval">开始评估</button>
+          </div>
+        </div>
+
+        <!-- History Card -->
+        <div class="card" style="flex:1;">
+          <div class="card-header">评估历史</div>
+          <div class="card-body" style="padding:0;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>模型</th>
+                  <th>mAP@50</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr>
+                  <td>07-03 14:30</td>
+                  <td>v1.3.0</td>
+                  <td style="color:var(--success);font-weight:600;">0.872</td>
+                  <td><span class="tag tag-success">完成</span></td>
+                  <td><button class="btn btn-text btn-sm" onclick="viewHistory('h1')">查看</button> <button class="btn btn-text btn-sm" onclick="deleteEvalRow(this)" style="color:var(--danger);">删除</button></td>
+                </tr>
+                <tr>
+                  <td>07-02 10:15</td>
+                  <td>v1.2.0</td>
+                  <td style="color:var(--success);font-weight:600;">0.851</td>
+                  <td><span class="tag tag-success">完成</span></td>
+                  <td><button class="btn btn-text btn-sm" onclick="viewHistory('h2')">查看</button> <button class="btn btn-text btn-sm" onclick="deleteEvalRow(this)" style="color:var(--danger);">删除</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Results -->
+      <div class="card result-panel">
+        <div class="card-header">评估结果</div>
+        <div class="card-body" id="resultArea">
+          <div class="empty-state" id="emptyState">
+            <div style="font-size:14px;margin-bottom:4px;">尚未执行评估</div>
+            <div style="font-size:12px;">选择模型和测试数据后点击「开始评估」</div>
+          </div>
+
+          <!-- Result Content (hidden initially) -->
+          <div id="resultContent" style="display:none;">
+            <div class="metric-grid" id="metricGrid"></div>
+
+            <div class="flex-between" style="margin-bottom:8px;">
+              <span style="font-weight:600;font-size:13px;">各类别精度明细</span>
+            </div>
+            <table class="table" style="margin-bottom:18px;">
+              <thead>
+                <tr><th>类别</th><th>AP@50</th><th>AP@50-95</th><th>Precision</th><th>Recall</th><th>实例数</th></tr>
+              </thead>
+              <tbody id="classTableBody"></tbody>
+            </table>
+
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">训练结果图 <span style="font-weight:400;font-size:11px;color:var(--text-muted);"></span></div>
+            <div class="img-gallery" id="trainImgGallery"><div class="img-gallery-row"></div></div>
+
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">模型检测效果 <span style="font-weight:400;font-size:11px;color:var(--text-muted);"></span></div>
+            <div class="img-gallery" id="detImgGallery"><div class="img-gallery-row"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+// ==================== STATE ====================
+let evalRunning = false;
+
+// ==================== MULTI-SELECT ====================
+function toggleMultiSelect(wrapId) {
+  var el = document.getElementById(wrapId);
+  el.classList.toggle('open');
+}
+function updateMultiSelect(wrapId) {
+  var el = document.getElementById(wrapId);
+  var checked = el.querySelectorAll('input[type="checkbox"]:checked');
+  var textEl = el.querySelector('.ms-text');
+  var labels = [];
+  checked.forEach(function(cb) {
+    labels.push(cb.parentElement.textContent.trim());
+  });
+  if (labels.length === 0) {
+    textEl.textContent = '— 未选择 —';
+    textEl.classList.add('ms-placeholder');
+  } else if (labels.length <= 2) {
+    textEl.textContent = labels.join('；');
+    textEl.classList.remove('ms-placeholder');
+  } else {
+    textEl.textContent = '已选 ' + labels.length + ' 个数据集';
+    textEl.classList.remove('ms-placeholder');
+  }
+}
+function getSelectedDatasets(wrapId) {
+  var el = document.getElementById(wrapId);
+  var checked = el.querySelectorAll('input[type="checkbox"]:checked');
+  var values = [];
+  checked.forEach(function(cb) { values.push(cb.value); });
+  return values;
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select.open').forEach(function(el) { el.classList.remove('open'); });
+  }
+});
+
+// ==================== EVALUATION ====================
+function startEval() {
+  if (evalRunning) return;
+  const evalDatasets = getSelectedDatasets('evalDatasetWrap');
+  if (evalDatasets.length === 0) { showToast('请选择测试数据集'); return; }
+  evalRunning = true;
+
+  const model = document.getElementById('evalModel').value;
+  if (!model) { showToast('请选择模型版本'); evalRunning = false; return; }
+
+  // Reset UI
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+  document.getElementById('btnEval').disabled = true;
+  document.getElementById('btnEval').textContent = '评估中...';
+
+  setTimeout(() => {
+    document.getElementById('metricGrid').innerHTML = `
+      <div class="metric-card"><div class="metric-value" style="color:var(--success);">0.872</div><div class="metric-label">mAP@50</div></div>
+      <div class="metric-card"><div class="metric-value" style="color:var(--primary);">0.651</div><div class="metric-label">mAP@50-95</div></div>
+      <div class="metric-card"><div class="metric-value">0.893</div><div class="metric-label">Precision</div></div>
+      <div class="metric-card"><div class="metric-value">0.847</div><div class="metric-label">Recall</div></div>
+    `;
+
+    const classes = [
+      {name:'police / 警察', ap50:'0.921', ap5095:'0.742', prec:'0.935', rec:'0.908', inst:128},
+      {name:'security / 保安', ap50:'0.897', ap5095:'0.685', prec:'0.910', rec:'0.884', inst:95},
+      {name:'worker / 工人', ap50:'0.853', ap5095:'0.618', prec:'0.872', rec:'0.835', inst:72},
+      {name:'vehicle / 车辆', ap50:'0.903', ap5095:'0.697', prec:'0.921', rec:'0.886', inst:24},
+      {name:'helmet / 安全帽', ap50:'0.786', ap5095:'0.513', prec:'0.827', rec:'0.722', inst:12},
+    ];
+    document.getElementById('classTableBody').innerHTML = classes.map(c => `
+      <tr><td>${c.name}</td><td style="font-weight:600;">${c.ap50}</td><td>${c.ap5095}</td><td>${c.prec}</td><td>${c.rec}</td><td>${c.inst}</td></tr>
+    `).join('');
+
+    renderResultImages();
+    finishEval();
+  }, 1500);
+}
+
+function finishEval() {
+  evalRunning = false;
+  document.getElementById('btnEval').disabled = false;
+  document.getElementById('btnEval').textContent = '重新评估';
+
+  const now = new Date();
+  const timeStr = now.toISOString().slice(5, 16).replace('T', ' ');
+
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${timeStr}</td>
+    <td>v1.3.0</td>
+    <td style="color:var(--success);font-weight:600;">0.872</td>
+    <td><span class="tag tag-success">完成</span></td>
+    <td><button class="btn btn-text btn-sm" onclick="scrollToResult()">查看</button> <button class="btn btn-text btn-sm" onclick="deleteEvalRow(this)" style="color:var(--danger);">删除</button></td>
+  `;
+  document.getElementById('historyBody').insertBefore(row, document.getElementById('historyBody').firstChild);
+}
+
+// ==================== RESULT IMAGES ====================
+function renderResultImages() {
+  var trainImgs = ['results.png', 'confusion_matrix.png', 'PR_curve.png'];
+  var detImgs = ['val_batch0_pred.jpg', 'val_batch1_pred.jpg', 'val_batch2_pred.jpg'];
+
+  var trainRow = document.querySelector('#trainImgGallery .img-gallery-row');
+  trainRow.innerHTML = trainImgs.map(function(name) {
+    return '<div class="img-card" onclick="openLightbox(\'train/' + name + '\', \'' + name + '\')">' +
+      '<div class="img-card-label">' + name + '</div>' +
+      '<img src="train/' + name + '" alt="' + name + '">' +
+    '</div>';
+  }).join('');
+
+  var detRow = document.querySelector('#detImgGallery .img-gallery-row');
+  detRow.innerHTML = detImgs.map(function(name) {
+    return '<div class="img-card" onclick="openLightbox(\'train/' + name + '\', \'' + name + '\')">' +
+      '<div class="img-card-label">' + name + '</div>' +
+      '<img src="train/' + name + '" alt="' + name + '">' +
+    '</div>';
+  }).join('');
+}
+
+// ==================== LIGHTBOX ====================
+function openLightbox(src, name) {
+  var existing = document.querySelector('.lightbox');
+  if (existing) existing.remove();
+
+  var lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.onclick = function(e) { if (e.target === lb) lb.remove(); };
+  lb.innerHTML =
+    '<span class="lightbox-close" onclick="this.parentElement.remove()">✕</span>' +
+    '<span class="lightbox-name">' + name + '</span>' +
+    '<img src="' + src + '" alt="' + name + '">' +
+    '<div class="lightbox-download"><a class="btn btn-primary" href="' + src + '" download="' + name + '" onclick="event.stopPropagation()">下载</a></div>';
+  document.body.appendChild(lb);
+}
+
+// ==================== HISTORY ====================
+function viewHistory(id) {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+
+  document.getElementById('metricGrid').innerHTML = `
+    <div class="metric-card"><div class="metric-value" style="color:var(--success);">0.872</div><div class="metric-label">mAP@50</div></div>
+    <div class="metric-card"><div class="metric-value" style="color:var(--primary);">0.651</div><div class="metric-label">mAP@50-95</div></div>
+    <div class="metric-card"><div class="metric-value">0.893</div><div class="metric-label">Precision</div></div>
+    <div class="metric-card"><div class="metric-value">0.847</div><div class="metric-label">Recall</div></div>
+  `;
+
+  renderResultImages();
+  scrollToResult();
+}
+
+function scrollToResult() {
+  document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+}
+
+function deleteEvalRow(btn) {
+  if (!confirm('确定删除该评估记录吗？')) return;
+  var row = btn.closest('tr');
+  if (row) row.remove();
+}
+
+(function() {
+  var user = getUser();
+  if (!user) { location.href = 'login.html'; return; }
+  document.getElementById('headerUserName').textContent = user.name;
+  document.getElementById('headerUserAvatar').textContent = user.avatar || user.name.charAt(0);
+
+  var project = localStorage.getItem('current_project'); if (!project) { location.href = 'projects.html'; return; } document.getElementById("sidebarProjectGroup").style.display = "block"; document.getElementById("sidebarSubPages").style.display = "block"; document.getElementById("sidebarHomeLink").href = (project.indexOf("my_") === 0) ? "my_projects.html" : "projects.html";
+  document.getElementById('sidebarProjectName').textContent = '当前算法：' + getProjectName(project);
+})();
+</script>
+</body>
+</html>

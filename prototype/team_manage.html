@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 团队管理</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { flex: 1; overflow: hidden; display: flex; gap: 12px; padding: 16px 20px; }
+
+  .team-list-panel { width: 240px; min-width: 240px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--card-shadow); display: flex; flex-direction: column; overflow: hidden; }
+  .team-list-header { padding: 14px 16px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--border); }
+  .team-list-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .team-item { padding: 12px 16px; cursor: pointer; transition: var(--transition); border-left: 3px solid transparent; }
+  .team-item:hover { background: #fafafa; }
+  .team-item.active { background: var(--primary-light); border-left-color: var(--primary); }
+  .team-item .team-name { font-weight: 600; font-size: 13px; }
+  .team-item .team-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .member-panel { flex: 1; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--card-shadow); display: flex; flex-direction: column; overflow: hidden; }
+  .member-header { padding: 14px 20px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .member-body { flex: 1; overflow-y: auto; }
+
+  .tag-owner { background: #fff7e6; color: #fa8c16; }
+  .tag-admin { background: #e6f7ff; color: #1890ff; }
+  .tag-member { background: #f5f5f5; color: #8c8c8c; }
+
+  .team-edit-btn { font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 2px 4px; border-radius: 3px; opacity: 0; transition: opacity var(--transition); flex-shrink: 0; }
+  .team-item:hover .team-edit-btn { opacity: 1; }
+  .team-edit-btn:hover { background: #e6f7ff; color: var(--primary); }
+
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .form-group select, .form-group input { padding: 8px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; font-family: var(--font); background: #fff; }
+  .form-group select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(24,144,255,0.15); }
+  .form-hint { font-size: 10px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <div class="sidebar-group"><div class="sidebar-group-title">平台导航</div>
+      <a class="sidebar-item" href="my_projects.html" data-icon="📁">个人算法</a>
+      <a class="sidebar-item" href="projects.html" data-icon="👥">团队算法</a>
+      <a class="sidebar-item" href="models.html" data-icon="📊">模型总览</a>
+      <a class="sidebar-item" href="models_use.html" data-icon="🔍">模型使用</a>
+      <a class="sidebar-item" href="training_queue.html" data-icon="📋">训练队列</a>
+    </div>
+    <div class="sidebar-group"><div class="sidebar-group-title">系统设置</div>
+      <a class="sidebar-item active" href="#" data-icon="⚙">团队管理</a>
+      <a class="sidebar-item" href="profile.html" data-icon="👤">个人中心</a>
+    </div>
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb"><a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;" data-icon="🏠">首页</a> <span class="sep">›</span> <span>团队管理</span></div>
+    <div class="header-actions">
+            <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+
+    <!-- Left: Team List -->
+    <div class="team-list-panel">
+      <div class="team-list-header">我的团队</div>
+      <div class="team-list-body" id="teamListBody"></div>
+    </div>
+
+    <!-- Right: Members -->
+    <div class="member-panel">
+      <div class="member-header">
+        <span id="memberPanelTitle">选择左侧团队查看成员</span>
+        <span style="flex:1;"></span>
+        <button class="btn btn-primary btn-sm" id="btnAddMember" onclick="showAddMemberModal()" style="display:none;">+ 添加成员</button>
+      </div>
+      <div class="member-body" id="memberBody">
+        <div style="text-align:center;padding:80px 20px;color:var(--text-muted);">请选择一个团队</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit Member Modal -->
+<div class="modal-overlay" id="editMemberModal" style="display:none;" onclick="if(event.target==this)closeEditMemberModal()">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      编辑成员 — <span id="editMemberName"></span>
+      <button class="modal-close" onclick="closeEditMemberModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 28px;">
+      <div class="form-group" style="margin-bottom:14px;" id="editMemberRoleRow">
+        <label>团队角色</label>
+        <select id="editMemberRole">
+          <option value="admin">管理员</option>
+          <option value="member">成员</option>
+        </select>
+        <span class="form-hint">管理员可添加成员和管理团队</span>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;" id="editMemberPermRow">
+        <label>算法权限</label>
+        <select id="editMemberPerm">
+          <option value="write">可编辑</option>
+          <option value="read">仅查看</option>
+        </select>
+        <span class="form-hint">可编辑：可操作算法数据；仅查看：只能查看</span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;gap:10px;" id="editMemberTransferRow">
+        <button class="btn btn-default btn-sm" onclick="transferOwnership()" style="flex:1;" id="editMemberTransferBtn">转移创建者身份</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEditMember()" style="flex:1;" id="editMemberRemoveBtn">从团队移除</button>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;text-align:center;" id="editMemberTransferHint">将创建者身份转移给该成员，你将降为管理员</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeEditMemberModal()">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveEditMember" onclick="saveEditMember()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="addMemberModal" style="display:none;" onclick="if(event.target==this)closeAddMemberModal()">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      添加成员
+      <button class="modal-close" onclick="closeAddMemberModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 28px;">
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>用户邮箱</label>
+        <input type="email" id="addMemberEmail" placeholder="请输入对方的注册邮箱">
+      </div>
+      <div class="form-group">
+        <label>角色</label>
+        <select id="selectRole">
+          <option value="member">成员</option>
+          <option value="admin">管理员</option>
+        </select>
+        <span class="form-hint">成员可查看算法数据；管理员可添加成员和管理团队</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeAddMemberModal()">取消</button>
+      <button class="btn btn-primary btn-sm" onclick="addMember()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal (reusable) -->
+<div class="modal-overlay" id="confirmModal" style="display:none;" onclick="if(event.target===this)closeConfirmModal()">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <span id="confirmModalTitle">确认操作</span>
+      <button class="modal-close" onclick="closeConfirmModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:28px 32px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;" id="confirmModalMsg"></div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;" id="confirmModalHint"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default btn-sm" onclick="closeConfirmModal()">取消</button>
+      <button class="btn btn-danger btn-sm" onclick="executeConfirm()">确认</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+var TEAMS_KEY = 'platform_teams';
+
+function getTeams() { try { return JSON.parse(localStorage.getItem(TEAMS_KEY)) || []; } catch(e) { return []; } }
+function saveTeams(teams) { localStorage.setItem(TEAMS_KEY, JSON.stringify(teams)); }
+
+var currentTeamId = '';
+var currentUser = '';
+
+// ── Render team list ──
+function renderTeamList() {
+  var teams = getTeams();
+  var body = document.getElementById('teamListBody');
+  body.innerHTML = teams.map(function(t) {
+    var count = (t.members || []).length;
+    return '<div class="team-item' + (t.id === currentTeamId ? ' active' : '') + '" onclick="selectTeam(\'' + t.id + '\')">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+        '<div>' +
+          '<div class="team-name">' + escapeHTML(t.name) + '</div>' +
+          '<div class="team-meta">' + count + ' 位成员 · 创建于 ' + t.createdAt + '</div>' +
+        '</div>' +
+        (currentUser === t.owner || (t.members || []).some(function(m) { return m.username === currentUser && m.role === 'admin'; })
+          ? '<span class="team-edit-btn" onclick="startEditTeamName(event, \'' + t.id + '\')" title="编辑团队名称">✎</span>'
+          : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Edit team name (click ✎ in team list) ──
+function startEditTeamName(e, teamId) {
+  e.stopPropagation();
+  var teams = getTeams();
+  var team = teams.find(function(t) { return t.id === teamId; });
+  if (!team) return;
+
+  var btn = e.target;
+  var itemEl = btn.closest('.team-item');
+  var nameEl = itemEl.querySelector('.team-name');
+  var currentName = team.name;
+
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentName;
+  input.style.cssText = 'font-size:13px;font-weight:600;padding:2px 6px;border:1px solid var(--primary);border-radius:3px;font-family:var(--font);outline:none;width:100%;box-sizing:border-box;';
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function finish(save) {
+    var newName = save ? input.value.trim() : currentName;
+    if (!newName) newName = currentName;
+    var div = document.createElement('div');
+    div.className = 'team-name';
+    div.textContent = newName;
+    input.replaceWith(div);
+    if (save && newName !== currentName) {
+      team.name = newName;
+      saveTeams(teams);
+      renderTeamList();
+      renderMemberPanel();
+      showToast('团队名称已更新为「' + newName + '」');
+    }
+  }
+
+  input.addEventListener('blur', function() { finish(true); });
+  input.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { finish(true); }
+    if (ev.key === 'Escape') { finish(false); }
+  });
+}
+
+function escapeHTML(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── Select team & show members ──
+function selectTeam(teamId) {
+  currentTeamId = teamId;
+  renderTeamList();
+  renderMemberPanel();
+}
+
+function getCurrentTeam() {
+  return getTeams().find(function(t) { return t.id === currentTeamId; });
+}
+
+function renderMemberPanel() {
+  var team = getCurrentTeam();
+  if (!team) return;
+
+  document.getElementById('memberPanelTitle').textContent = '团队成员 — ' + team.name;
+  var isOwner = team.owner === currentUser;
+  var isAdmin = !isOwner && (team.members || []).some(function(m) { return m.username === currentUser && m.role === 'admin'; });
+  document.getElementById('btnAddMember').style.display = (isOwner || isAdmin) ? 'inline-flex' : 'none';
+
+  var members = team.members || [];
+  var body = document.getElementById('memberBody');
+  var roleLabels = { owner: '创建者', admin: '管理员', member: '成员' };
+  var roleClasses = { owner: 'tag-owner', admin: 'tag-admin', member: 'tag-member' };
+  var permLabels = { write: '可编辑', read: '仅查看' };
+
+  var canManage = isOwner || isAdmin;
+  var html = '<table class="table"><thead><tr>' +
+    '<th style="width:50px;">#</th>' +
+    '<th>用户名</th>' +
+    '<th style="width:80px;">角色</th>' +
+    '<th style="width:80px;">权限</th>' +
+    '<th style="width:110px;">加入时间</th>' +
+    (canManage ? '<th style="width:80px;">操作</th>' : '') +
+    '</tr></thead><tbody>';
+
+  members.forEach(function(m, i) {
+    var perm = m.permission || (m.role === 'owner' ? 'write' : 'read');
+    // 能否编辑该成员：owner 可编辑所有人（除自己），admin 只能编辑普通 member
+    var canEditThis = false;
+    if (isOwner) {
+      canEditThis = m.username !== currentUser;
+    } else if (isAdmin) {
+      canEditThis = m.role === 'member';
+    }
+    html += '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td style="font-weight:500;">' + m.username + '</td>' +
+      '<td><span class="tag ' + (roleClasses[m.role] || 'tag-member') + '">' + (roleLabels[m.role] || m.role) + '</span></td>' +
+      '<td><span class="tag" style="background:' + (perm === 'write' ? '#f6ffed' : '#f5f5f5') + ';color:' + (perm === 'write' ? '#52c41a' : '#8c8c8c') + ';">' + (permLabels[perm] || '仅查看') + '</span></td>' +
+      '<td>' + (m.joinedAt || team.createdAt) + '</td>' +
+      (canManage
+        ? '<td>' + (canEditThis
+            ? '<button class="btn btn-text btn-sm" onclick="showEditMemberModal(\'' + m.username + '\')" style="color:var(--primary);">编辑</button>'
+            : '') + '</td>'
+        : '') +
+    '</tr>';
+  });
+
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+// ── Add member ──
+function showAddMemberModal() {
+  var team = getCurrentTeam();
+  if (!team) return;
+  document.getElementById('addMemberEmail').value = '';
+  document.getElementById('selectRole').value = 'member';
+  document.getElementById('addMemberModal').style.display = 'flex';
+}
+
+function closeAddMemberModal() {
+  document.getElementById('addMemberModal').style.display = 'none';
+}
+
+function addMember() {
+  var email = document.getElementById('addMemberEmail').value.trim();
+  var role = document.getElementById('selectRole').value;
+  if (!email) { showToast('请输入用户邮箱'); return; }
+
+  var allUsers = [];
+  try { allUsers = JSON.parse(localStorage.getItem('platform_users')) || []; } catch(e) {}
+  var found = allUsers.find(function(u) { return u.email === email; });
+  if (!found) { showToast('未找到该邮箱对应的用户'); return; }
+
+  var teams = getTeams();
+  var team = teams.find(function(t) { return t.id === currentTeamId; });
+  if (!team) return;
+  if (!team.members) team.members = [];
+  if (team.members.find(function(m) { return m.username === found.username; })) {
+    showToast(found.username + ' 已在团队中'); return;
+  }
+  team.members.push({ username: found.username, role: role, permission: 'read', joinedAt: new Date().toISOString().slice(0, 10) });
+  saveTeams(teams);
+  closeAddMemberModal();
+  renderTeamList();
+  renderMemberPanel();
+  showToast(found.username + ' 已加入团队');
+}
+
+// ── Confirm Modal (reusable) ──
+var _pendingConfirm = null;
+function showConfirmModal(title, msg, hint, btnText, callback) {
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalMsg').textContent = msg;
+  document.getElementById('confirmModalHint').textContent = hint || '';
+  document.getElementById('confirmModal').style.display = 'flex';
+  _pendingConfirm = callback;
+}
+function closeConfirmModal() {
+  document.getElementById('confirmModal').style.display = 'none';
+  _pendingConfirm = null;
+}
+function executeConfirm() {
+  if (_pendingConfirm) { _pendingConfirm(); _pendingConfirm = null; }
+  document.getElementById('confirmModal').style.display = 'none';
+}
+
+// ── Edit member ──
+var editingMemberName = '';
+
+function showEditMemberModal(username) {
+  editingMemberName = username;
+  var team = getCurrentTeam();
+  if (!team) return;
+  var m = (team.members || []).find(function(x) { return x.username === username; });
+  if (!m) return;
+
+  var isOwner = team.owner === currentUser;
+  document.getElementById('editMemberName').textContent = username;
+  document.getElementById('editMemberRole').value = m.role || 'member';
+  document.getElementById('editMemberPerm').value = m.permission || 'read';
+
+  // Clear any inline display overrides from previous calls
+  var el = document.getElementById('editMemberRoleRow');
+  el.style.removeProperty('display');
+  el = document.getElementById('editMemberPermRow');
+  el.style.removeProperty('display');
+  el = document.getElementById('editMemberTransferBtn');
+  el.style.removeProperty('display');
+  el = document.getElementById('editMemberRemoveBtn');
+  el.style.removeProperty('display');
+  el = document.getElementById('editMemberTransferHint');
+  el.style.removeProperty('display');
+  el = document.getElementById('btnSaveEditMember');
+  el.style.removeProperty('display');
+  el = document.getElementById('editMemberTransferRow');
+  el.style.removeProperty('display');
+
+  // Hide elements based on role
+  if (!isOwner) {
+    document.getElementById('editMemberRoleRow').style.display = 'none';
+    document.getElementById('editMemberTransferBtn').style.display = 'none';
+    document.getElementById('editMemberTransferHint').style.display = 'none';
+  }
+
+  document.getElementById('editMemberModal').style.display = 'flex';
+}
+
+function transferOwnership() {
+  showConfirmModal(
+    '转移创建者身份',
+    '确定转移给 ' + editingMemberName + ' 吗？',
+    '转移后你将成为管理员，' + editingMemberName + ' 成为新的创建者。此操作不可撤销。',
+    '确认转移',
+    doTransferOwnership
+  );
+}
+
+function doTransferOwnership() {
+  var teams = getTeams();
+  var team = teams.find(function(t) { return t.id === currentTeamId; });
+  if (!team) return;
+
+  // 当前创建者降为管理员
+  var oldOwner = (team.members || []).find(function(x) { return x.username === currentUser; });
+  if (oldOwner) { oldOwner.role = 'admin'; }
+
+  // 目标成员升为创建者
+  var newOwner = (team.members || []).find(function(x) { return x.username === editingMemberName; });
+  if (newOwner) { newOwner.role = 'owner'; newOwner.permission = 'write'; }
+
+  team.owner = editingMemberName;
+  saveTeams(teams);
+  closeEditMemberModal();
+  renderTeamList();
+  renderMemberPanel();
+  showToast('创建者身份已转移给 ' + editingMemberName);
+}
+
+function closeEditMemberModal() {
+  document.getElementById('editMemberModal').style.display = 'none';
+}
+
+function saveEditMember() {
+  var role = document.getElementById('editMemberRole').value;
+  var perm = document.getElementById('editMemberPerm').value;
+  var teams = getTeams();
+  var team = teams.find(function(t) { return t.id === currentTeamId; });
+  if (!team) return;
+  var m = (team.members || []).find(function(x) { return x.username === editingMemberName; });
+  if (!m) return;
+
+  var isOwner = team.owner === currentUser;
+  if (isOwner) {
+    // 创建者可以改角色和权限
+    m.role = role;
+    m.permission = perm;
+  } else {
+    // 管理员只能改成员的权限
+    m.permission = perm;
+  }
+  saveTeams(teams);
+  closeEditMemberModal();
+  renderTeamList();
+  renderMemberPanel();
+  showToast(editingMemberName + ' 的信息已更新');
+}
+
+function deleteEditMember() {
+  showConfirmModal(
+    '移除团队成员',
+    '确定将 ' + editingMemberName + ' 从团队中移除吗？',
+    '移除后该成员将失去此团队的所有访问权限。',
+    '确认移除',
+    doDeleteEditMember
+  );
+}
+
+function doDeleteEditMember() {
+  var teams = getTeams();
+  var team = teams.find(function(t) { return t.id === currentTeamId; });
+  if (!team) return;
+  team.members = (team.members || []).filter(function(m) { return m.username !== editingMemberName; });
+  saveTeams(teams);
+  closeEditMemberModal();
+  renderTeamList();
+  renderMemberPanel();
+  showToast(editingMemberName + ' 已移出团队');
+}
+
+function initPlatformUsers() {
+  var users = [];
+  try { users = JSON.parse(localStorage.getItem('platform_users')) || []; } catch(e) {}
+  if (users.length < 7) {
+    var defaults = [
+      { username: 'admin', password: '123456', email: 'admin@example.com', role: 'admin', name: '管理员', avatar: '管', createdAt: '2026-06-01' },
+      { username: '张三', password: '123456', email: 'zhangsan@example.com', role: 'engineer', name: '张三', avatar: '张', createdAt: '2026-06-10' },
+      { username: '李四', password: '123456', email: 'lisi@example.com', role: 'annotator', name: '李四', avatar: '李', createdAt: '2026-06-15' },
+      { username: '王五', password: '123456', email: 'wangwu@example.com', role: 'engineer', name: '王五', avatar: '王', createdAt: '2026-06-20' },
+      { username: '赵六', password: '123456', email: 'zhaoliu@example.com', role: 'annotator', name: '赵六', avatar: '赵', createdAt: '2026-07-01' },
+      { username: '孙七', password: '123456', email: 'sunqi@example.com', role: 'engineer', name: '孙七', avatar: '孙', createdAt: '2026-07-05' },
+      { username: '周八', password: '123456', email: 'zhouba@example.com', role: 'annotator', name: '周八', avatar: '周', createdAt: '2026-07-10' },
+      { username: '钱九', password: '123456', email: 'qianjiu@example.com', role: 'customer', name: '钱九', avatar: '钱', createdAt: '2026-07-15' },
+    ];
+    localStorage.setItem('platform_users', JSON.stringify(defaults));
+  }
+}
+
+// ── Init teams with members ──
+function initTeams() {
+  var teams = getTeams();
+  // Force overwrite if teams are missing members or fewer than 5
+  var needInit = teams.length < 5;
+  if (!needInit) {
+    for (var i = 0; i < teams.length; i++) {
+      if (!teams[i].members || teams[i].members.length === 0) { needInit = true; break; }
+    }
+  }
+  if (needInit) {
+    teams = [
+      { id: 'team_anbao', name: '安保检测组', createdAt: '2026-05-01', owner: 'admin', members: [
+        { username: 'admin', role: 'owner', permission: 'write', joinedAt: '2026-05-01' },
+        { username: '张三', role: 'admin', permission: 'write', joinedAt: '2026-06-10' },
+        { username: '王五', role: 'member', permission: 'write', joinedAt: '2026-07-03' },
+        { username: '赵六', role: 'member', permission: 'read', joinedAt: '2026-07-08' },
+      ]},
+      { id: 'team_xiaofang', name: '消防安全组', createdAt: '2026-06-01', owner: '张三', members: [
+        { username: '张三', role: 'owner', permission: 'write', joinedAt: '2026-06-01' },
+        { username: 'admin', role: 'member', permission: 'read', joinedAt: '2026-06-15' },
+        { username: '李四', role: 'member', permission: 'write', joinedAt: '2026-06-20' },
+        { username: '孙七', role: 'admin', permission: 'write', joinedAt: '2026-07-01' },
+        { username: '周八', role: 'member', permission: 'read', joinedAt: '2026-07-05' },
+      ]},
+      { id: 'team_default', name: '默认团队', createdAt: '2026-04-01', owner: 'admin', members: [
+        { username: 'admin', role: 'owner', permission: 'write', joinedAt: '2026-04-01' },
+        { username: '张三', role: 'member', permission: 'write', joinedAt: '2026-04-10' },
+        { username: '李四', role: 'member', permission: 'read', joinedAt: '2026-04-15' },
+        { username: '王五', role: 'admin', permission: 'write', joinedAt: '2026-05-20' },
+        { username: '赵六', role: 'member', permission: 'read', joinedAt: '2026-06-01' },
+      ]},
+      { id: 'team_zhineng', name: '智能交通组', createdAt: '2026-06-15', owner: '王五', members: [
+        { username: '王五', role: 'owner', permission: 'write', joinedAt: '2026-06-15' },
+        { username: '张三', role: 'admin', permission: 'write', joinedAt: '2026-06-18' },
+        { username: '孙七', role: 'member', permission: 'write', joinedAt: '2026-07-02' },
+        { username: '周八', role: 'member', permission: 'read', joinedAt: '2026-07-10' },
+      ]},
+      { id: 'team_shipin', name: '视频分析组', createdAt: '2026-07-01', owner: '李四', members: [
+        { username: '李四', role: 'owner', permission: 'write', joinedAt: '2026-07-01' },
+        { username: 'admin', role: 'admin', permission: 'write', joinedAt: '2026-07-02' },
+        { username: '王五', role: 'member', permission: 'write', joinedAt: '2026-07-03' },
+        { username: '赵六', role: 'member', permission: 'read', joinedAt: '2026-07-05' },
+        { username: '孙七', role: 'member', permission: 'read', joinedAt: '2026-07-08' },
+        { username: '周八', role: 'member', permission: 'read', joinedAt: '2026-07-11' },
+      ]},
+    ];
+    saveTeams(teams);
+  }
+}
+
+// ── Auth ──
+(function() {
+  var user = getUser();
+  if (!user) { location.href = 'login.html'; return; }
+  currentUser = user.username;
+  initPlatformUsers();
+  document.getElementById('headerUserName').textContent = user.name;
+  document.getElementById('headerUserAvatar').textContent = user.avatar || user.name.charAt(0);
+  initTeams();
+  renderTeamList();
+})();
+</script>
+</body>
+</html>

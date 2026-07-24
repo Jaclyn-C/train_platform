@@ -1,0 +1,99 @@
+/* ============================================================
+   MyProjects.css — 个人算法
+   完全参照 prototype/common.css + prototype/my_projects.html
+   ============================================================ */
+
+/* ===== page-header ===== */
+.page-header { display: flex; align-items: center; justify-content: space-between; }
+.page-header h2 { font-size: 20px; font-weight: 600; }
+
+/* ===== Empty State ===== */
+.empty-state { text-align: center; padding: 80px 20px; color: #bfbfbf; }
+
+/* ===== Project Grid ===== */
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+
+/* ===== Project Card ===== */
+.project-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 20px 24px;
+  transition: 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.project-card:hover {
+  border-color: #1890ff;
+  box-shadow: 0 4px 12px rgba(24,144,255,0.12);
+}
+
+/* ===== Card Header ===== */
+.p-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.p-icon {
+  width: 42px; height: 42px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0; color: #fff;
+}
+.p-name { font-size: 16px; font-weight: 700; }
+.p-date { font-size: 11px; color: #bfbfbf; margin-top: 2px; }
+
+/* ===== Tags (matching common.css) ===== */
+.tag {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 4px; font-size: 11px;
+}
+.tag-warning { background: #fff7e6; color: #faad14; }
+.tag-iterating { background: #f9f0ff; color: #722ed1; }
+
+/* ===== Pipeline ===== */
+.pipeline {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 16px;
+}
+.pipe-step { flex: 1; text-align: center; }
+.pipe-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%; margin: 0 auto 4px;
+}
+.pipe-dot.done { background: #52c41a; }
+.pipe-dot.active { background: #1890ff; animation: pulse 1.5s infinite; }
+.pipe-dot.wait { background: #e0e0e0; }
+.pipe-label { font-size: 10px; color: #bfbfbf; }
+.pipe-arrow {
+  color: #d9d9d9; font-size: 10px;
+  flex-shrink: 0; padding: 0 2px; margin-bottom: 14px;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ===== Stats Grid ===== */
+.p-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-bottom: 16px; }
+.p-stat-item { display: flex; flex-direction: column; gap: 2px; }
+.p-stat-label {
+  font-size: 10px; color: #bfbfbf;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.p-stat-value { font-size: 12px; color: #262626; font-weight: 600; }
+.p-stat-value.success { color: #52c41a; }
+.p-stat-value.primary { color: #1890ff; }
+.p-stat-value.muted { color: #8c8c8c; font-weight: 400; }
+
+/* ===== Buttons (matching common.css) ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 14px; border-radius: 6px; font-size: 12px;
+  cursor: pointer; border: 1px solid transparent;
+  font-family: inherit; transition: 0.2s ease; white-space: nowrap;
+  background: #fff; color: #262626; border-color: #d9d9d9;
+  line-height: 1.5;
+}
+.btn:hover { color: #1890ff; border-color: #1890ff; }
+.btn-primary { background: #1890ff; color: #fff; border-color: #1890ff; }
+.btn-primary:hover { background: #40a9ff; border-color: #40a9ff; }
+.btn-danger { color: #ff4d4f; border-color: #ff4d4f; }
+.btn-danger:hover { background: #fff1f0; }
+.btn-text { background: transparent; color: #1890ff; border: none; padding: 4px 8px; }
+.btn-text:hover { background: #e6f7ff; }
+.btn-sm { padding: 3px 8px; font-size: 11px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }

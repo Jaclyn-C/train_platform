@@ -1,0 +1,22 @@
+/* ============================================================
+   Dashboard.css — 首页仪表盘样式
+   ============================================================ */
+
+/* ----- Welcome Section ----- */
+.dashboard-welcome {
+  margin-bottom: 24px;
+}
+
+.dashboard-welcome h3 {
+  margin-bottom: 8px;
+}
+
+/* ----- Quick Link Card ----- */
+.dashboard-link-card {
+  text-align: center;
+  cursor: pointer;
+}
+
+.dashboard-link-icon {
+  margin-bottom: 12px;
+}

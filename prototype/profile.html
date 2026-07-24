@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 个人中心</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { padding: 24px 32px; }
+  .page-header { margin-bottom: 20px; }
+  .page-header h2 { font-size: 20px; font-weight: 600; }
+
+  .profile-layout { display: flex; gap: 20px; max-width: 800px; }
+  .profile-card { background: var(--card-bg); border-radius: 8px; box-shadow: var(--card-shadow); padding: 28px; }
+  .profile-side { width: 240px; text-align: center; }
+  .profile-side .avatar-large { width: 80px; height: 80px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; margin-bottom: 12px; }
+  .profile-side .role-tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; margin-top: 4px; }
+  .role-engineer { background: #e6f7ff; color: #1890ff; }
+  .role-annotator { background: #fff7e6; color: #fa8c16; }
+  .role-admin { background: #f6ffed; color: #52c41a; }
+  .role-customer { background: #f9f0ff; color: #722ed1; }
+
+  .profile-main { flex: 1; }
+  .profile-main h3 { font-size: 15px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .form-row label { width: 64px; font-size: 12px; color: var(--text-secondary); line-height: 32px; flex-shrink: 0; }
+  .form-row input { flex: 1; padding: 7px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; font-family: var(--font); outline: none; }
+  .form-row input:focus { border-color: var(--primary); }
+  .form-row .readonly { background: #f5f5f5; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <div class="sidebar-group"><div class="sidebar-group-title">平台导航</div>
+      <a class="sidebar-item" href="my_projects.html" data-icon="📁">个人算法</a>
+      <a class="sidebar-item" href="projects.html" data-icon="👥">团队算法</a>
+      <a class="sidebar-item" href="models.html" data-icon="📊">模型总览</a>
+      <a class="sidebar-item" href="models_use.html" data-icon="🔍">模型使用</a>
+      <a class="sidebar-item" href="training_queue.html" data-icon="📋">训练队列</a>
+    </div>
+    <div class="sidebar-group" id="sidebarProjectGroup" style="display:none;">
+      <div class="sidebar-group-title">当前算法</div>
+      <div style="padding:0 20px;">
+        <select id="sidebarProject" onchange="switchProject(this.value)" style="width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;font-family:var(--font);">
+          <option value="security" style="color:#262626;">保安服检测</option>
+          <option value="fire" style="color:#262626;">烟火检测</option>
+          <option value="helmet" style="color:#262626;">安全帽检测</option>
+        </select>
+      </div>
+    </div>
+    <div class="sidebar-group" id="sidebarSubPages" style="display:none;">
+      <a class="sidebar-item" href="data_center.html" data-icon="📦">数据中心</a>
+      <a class="sidebar-item" href="annotation.html" data-icon="🏷">数据标注</a>
+      <a class="sidebar-item" href="training.html" data-icon="🏋">模型训练</a>
+      <a class="sidebar-item" href="evaluation.html" data-icon="📈">模型评估</a>
+      <a class="sidebar-item" href="trial.html" data-icon="🧪">模型试用</a>
+      <a class="sidebar-item" href="deployment.html" data-icon="🚀">模型部署</a>
+    </div>
+    <div class="sidebar-group"><div class="sidebar-group-title">系统设置</div>
+      <a class="sidebar-item" href="team_manage.html" data-icon="⚙">团队管理</a>
+      <a class="sidebar-item active" href="#" data-icon="👤">个人中心</a>
+    </div>
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb"><a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;" data-icon="🏠">首页</a> <span class="sep">›</span> <span>个人中心</span></div>
+    <div class="header-actions">
+            <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+    <div class="page-header"><h2>个人中心</h2></div>
+
+    <div class="profile-layout">
+      <div class="profile-card profile-side">
+        <div class="avatar-large" id="profileAvatar">U</div>
+        <div style="font-size:18px;font-weight:700;" id="profileName">用户名</div>
+        <div class="role-tag" id="profileRole">角色</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--text-muted);">注册于 <span id="profileDate">—</span></div>
+      </div>
+
+      <div class="profile-card profile-main">
+        <h3>编辑资料</h3>
+        <div class="form-row">
+          <label>用户名</label>
+          <input type="text" id="editUsername" class="readonly" readonly>
+        </div>
+        <div class="form-row">
+          <label>显示名称</label>
+          <input type="text" id="editName" placeholder="请输入显示名称">
+        </div>
+        <div class="form-row">
+          <label>邮箱</label>
+          <input type="email" id="editEmail" placeholder="请输入邮箱">
+        </div>
+        <div class="form-row">
+          <label>角色</label>
+          <input type="text" id="editRole" class="readonly" readonly>
+        </div>
+
+        <h3 style="margin-top:20px;">修改密码</h3>
+        <div class="form-row">
+          <label>旧密码</label>
+          <input type="password" id="oldPassword" placeholder="请输入旧密码">
+        </div>
+        <div class="form-row">
+          <label>新密码</label>
+          <input type="password" id="newPassword" placeholder="请输入新密码（至少 6 位）">
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-primary" onclick="saveProfile()">保存修改</button>
+          <button class="btn btn-default" onclick="location.href='projects.html'">返回</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+var USERS_KEY = 'platform_users';
+
+function getUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch(e) { return []; } }
+
+function loadProfile() {
+  var user = getUser();
+  if (!user) { location.href = 'login.html'; return; }
+
+  document.getElementById('headerUserName').textContent = user.name;
+  document.getElementById('headerUserAvatar').textContent = user.avatar || user.name.charAt(0);
+  document.getElementById('profileAvatar').textContent = user.avatar || user.name.charAt(0);
+  document.getElementById('profileName').textContent = user.name;
+  document.getElementById('profileDate').textContent = user.createdAt || '—';
+
+  var roleNames = { engineer: '算法工程师', annotator: '标注人员', admin: '管理员', customer: '客户' };
+  var roleName = roleNames[user.role] || user.role;
+  document.getElementById('profileRole').textContent = roleName;
+  document.getElementById('profileRole').className = 'role-tag role-' + user.role;
+
+  document.getElementById('editUsername').value = user.username;
+  document.getElementById('editName').value = user.name;
+  document.getElementById('editEmail').value = user.email || '';
+  document.getElementById('editRole').value = roleName;
+
+  // 个人中心始终不显示算法侧边栏
+  document.getElementById('sidebarProjectGroup').style.display = 'none';
+  document.getElementById('sidebarSubPages').style.display = 'none';
+}
+
+function saveProfile() {
+  var user = getUser();
+  if (!user) return;
+
+  var newName = document.getElementById('editName').value.trim();
+  var newEmail = document.getElementById('editEmail').value.trim();
+  var oldPw = document.getElementById('oldPassword').value.trim();
+  var newPw = document.getElementById('newPassword').value.trim();
+
+  if (!newName) { showToast('请输入显示名称'); return; }
+
+  // Check password change
+  if (newPw) {
+    if (!oldPw) { showToast('请输入旧密码'); return; }
+    if (oldPw !== user.password) { showToast('旧密码错误'); return; }
+    if (newPw.length < 6) { showToast('新密码至少 6 位'); return; }
+    user.password = newPw;
+  }
+
+  // Update user
+  user.name = newName;
+  user.avatar = newName.charAt(0);
+  user.email = newEmail;
+  localStorage.setItem('current_user', JSON.stringify(user));
+
+  // Update users array
+  var users = getUsers();
+  var idx = users.findIndex(function(u) { return u.username === user.username; });
+  if (idx >= 0) {
+    users[idx].name = user.name;
+    users[idx].avatar = user.avatar;
+    users[idx].email = user.email;
+    if (newPw) users[idx].password = newPw;
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+
+  loadProfile();
+  document.getElementById('oldPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  showToast('资料已保存');
+}
+
+function switchProject(val) {
+  localStorage.setItem('current_project', val);
+  location.reload();
+}
+
+loadProfile();
+</script>
+</body>
+</html>

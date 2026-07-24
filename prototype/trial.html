@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>算法训练平台 — 模型试用</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 16px 20px; gap: 16px; }
+
+  .trial-layout { flex: 1; display: flex; gap: 12px; min-height: 0; }
+
+  .card { display: flex; flex-direction: column; }
+  .card-header { flex-shrink: 0; }
+  .card-body { overflow-y: auto; flex: 1; }
+
+  .config-panel { width: 300px; min-width: 300px; }
+  .result-panel { flex: 1; min-width: 0; }
+
+  .form-group { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-group label { font-size: 11px; color: var(--text-secondary); }
+  .form-group select, .form-group input { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; font-family: var(--font); height: 32px; box-sizing: border-box; }
+  .form-group .hint { font-size: 10px; color: var(--text-muted); }
+
+  .upload-zone { border: 2px dashed #d9d9d9; border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; transition: var(--transition); background: #fafafa; margin-bottom: 14px; }
+  .upload-zone:hover { border-color: var(--primary); background: var(--primary-light); }
+
+  .file-item { display: flex; align-items: center; padding: 8px 10px; background: #fafafa; border-radius: 4px; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+  .file-item .file-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-item .file-remove { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 14px; }
+
+  .img-gallery { flex: 1; overflow-y: auto; min-height: 0; }
+  .img-gallery::-webkit-scrollbar { width: 5px; }
+  .img-gallery::-webkit-scrollbar-track { background: transparent; }
+  .img-gallery::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 3px; }
+  .img-gallery-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .img-card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #fff; cursor: pointer; transition: var(--transition); }
+  .img-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(24,144,255,0.15); }
+  .img-card .img-card-label { font-size: 11px; color: var(--text-secondary); padding: 6px 10px; background: #fafafa; border-bottom: 1px solid var(--border); text-align: center; }
+  .img-card svg { display: block; width: 100%; height: auto; }
+
+  .summary-box { background: #f6ffed; border: 1px solid #b7eb8f; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px; font-size: 12px; display: flex; gap: 20px; }
+
+  .lightbox { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+  .lightbox img { max-width: 90vw; max-height: 80vh; }
+  .lightbox .lightbox-close { position: absolute; top: 20px; right: 30px; font-size: 32px; color: #fff; cursor: pointer; }
+  .lightbox .lightbox-download { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); }
+  .lightbox .lightbox-name { position: absolute; top: 20px; left: 30px; color: #fff; font-size: 14px; }
+
+  .empty-state { padding: 60px 20px; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">AI</div>
+    <div class="sidebar-expand-btn" onclick="toggleSidebar()" title="展开侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="14" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+    <div class="logo-text">算法训练平台</div>
+    <div class="sidebar-collapse-btn" onclick="toggleSidebar()" title="收起侧边栏"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="4" width="14" height="1.5" rx="0.5"/><rect x="3" y="9.25" width="10" height="1.5" rx="0.5"/><rect x="3" y="14.5" width="14" height="1.5" rx="0.5"/></svg></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-group" id="sidebarTopHome"><a class="sidebar-item" id="sidebarHomeLink" href="my_projects.html" data-icon="🏠">首页</a></div>
+    <div class="sidebar-group" id="sidebarProjectGroup" style="display:none;">
+      <div class="sidebar-group-title" style="font-size:13px;color:#fff;font-weight:600;text-transform:none;opacity:1;" id="sidebarProjectName">当前算法：—</div>
+    </div>
+    <div class="sidebar-group" id="sidebarSubPages" style="display:none;">
+      <a class="sidebar-item" href="data_center.html" data-icon="📦">数据中心</a>
+      <a class="sidebar-item" href="annotation.html" data-icon="🏷">数据标注</a>
+      <a class="sidebar-item" href="training.html" data-icon="🏋">模型训练</a>
+      <a class="sidebar-item" href="evaluation.html" data-icon="📈">模型评估</a>
+      <a class="sidebar-item active" href="#" data-icon="🧪">模型试用</a>
+      <a class="sidebar-item" href="deployment.html" data-icon="🚀">模型部署</a>
+    </div>
+
+  </nav>
+</aside>
+<script>(function(){var s=document.querySelector(".sidebar");if(s&&localStorage.getItem("sidebar_collapsed")==="true"){s.classList.add("collapsed")}}())</script>
+
+<div class="main">
+  <header class="header">
+    <div class="breadcrumb"><a href="my_projects.html" style="color:var(--text-secondary);text-decoration:none;">首页</a> <span class="sep">›</span> <span>模型试用</span></div>
+    <div class="header-actions">
+            <div class="park-select">
+        <span class="ps-label">园区</span>
+        <select id="headerPark" onchange="onParkChange(this)">
+          <option value="">— 请选择园区 —</option>
+          <option value="ganzhou">赣州</option>
+          <option value="vietnam">越南</option>
+        </select>
+      </div>
+<div class="task-type-select">
+        <span class="ts-label">模型任务</span>
+        <select id="headerTaskType" onchange="onTaskTypeChange(this)">
+          <option value="">— 请选择任务 —</option>
+          <option value="detection">目标检测（YOLO）</option>
+          <option value="pose" disabled>姿态估计 — 规划中</option>
+          <option value="segment" disabled>实例分割 — 规划中</option>
+          <option value="embedding" disabled>文本嵌入 — 规划中</option>
+        </select>
+      </div>
+            
+
+      <div class="user-menu" onclick="document.getElementById('userDropdown').classList.toggle('show')">
+        <span style="font-size:12px;" id="headerUserName">用户</span>
+        <div id="headerUserAvatar" style="width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="profile.html" data-icon="👤">个人中心</a>
+          <a href="#" onclick="event.stopPropagation();logout()">退出登录</a>
+        </div>
+      </div>
+    </div>
+  </header>
+    <div class="setup-prompt" id="setupPrompt">
+      <div class="sp-card">
+
+        <div class="sp-title">请选择园区和模型任务</div>
+        <div class="sp-desc">在顶部 <span class="sp-highlight">园区</span> 和 <span class="sp-highlight">模型任务</span> 下拉框中做出选择<br>即可进入工作区</div>
+      </div>
+    </div>
+
+
+  <div class="content">
+    <div class="page-header">
+      <h2>模型试用</h2>
+    </div>
+
+    <div class="trial-layout">
+
+      <!-- Left: Config -->
+      <div class="card config-panel">
+        <div class="card-header">试用配置</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>选择模型</label>
+            <select id="trialModel">
+              <option value="">— 选择模型 —</option>
+              <option value="best_v1.3" selected>best.pt — v1.3.0 (mAP@50 0.872)</option>
+              <option value="best_v1.2">best.pt — v1.2.0 (mAP@50 0.851)</option>
+              <option value="yolo11m">yolo11m.pt (预训练)</option>
+            </select>
+            <span class="hint">选择用于推理的模型</span>
+          </div>
+
+          <div class="form-group">
+            <label>置信度阈值</label>
+            <div style="display:flex;align-items:center;gap:8px;height:32px;">
+              <input type="range" id="trialConf" min="1" max="9" value="3" style="width:120px;" oninput="document.getElementById('confVal').textContent=(this.value/10).toFixed(1)">
+              <span id="confVal" style="font-weight:600;">0.3</span>
+            </div>
+            <span class="hint">低于此置信度的框将不显示</span>
+          </div>
+
+          <div style="margin:14px 0 8px;font-size:12px;font-weight:600;color:var(--text-secondary);">上传测试文件</div>
+          <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <div style="color:var(--primary);font-size:24px;margin-bottom:6px;">+</div>
+            <div style="font-size:13px;">点击上传图片或视频</div>
+            <div style="font-size:11px;color:var(--text-muted);">支持 JPG/PNG/MP4</div>
+          </div>
+          <input type="file" id="fileInput" accept="image/*,video/*" multiple style="display:none;" onchange="handleFiles(this.files)">
+
+          <div id="fileList"></div>
+
+          <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="startTrial()" id="btnTrial">开始试用</button>
+        </div>
+      </div>
+
+      <!-- Right: Results -->
+      <div class="card result-panel">
+        <div class="card-header">检测结果</div>
+        <div class="card-body" id="resultArea" style="display:flex;flex-direction:column;">
+          <div class="empty-state" id="emptyState">
+            <div style="font-size:14px;margin-bottom:4px;">尚未开始试用</div>
+            <div style="font-size:12px;">选择模型、上传测试文件后点击「开始试用」</div>
+          </div>
+
+          <div id="resultContent" style="display:none;flex-direction:column;flex:1;min-height:0;">
+            <div style="flex-shrink:0;">
+              <div class="summary-box" id="summaryBox"></div>
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">检测结果图 <span style="font-weight:400;font-size:11px;color:var(--text-muted);">点击放大 · 向下滚动查看更多</span></div>
+            </div>
+            <div class="img-gallery"><div class="img-gallery-row" id="resultGalleryRow"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+var uploadedFiles = [];
+var trialRunning = false;
+
+function handleFiles(files) {
+  if (!files || files.length === 0) return;
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    if (!uploadedFiles.some(function(u) { return u.name === f.name && u.size === f.size; })) {
+      uploadedFiles.push(f);
+    }
+  }
+  renderFileList();
+}
+
+function renderFileList() {
+  var el = document.getElementById('fileList');
+  if (uploadedFiles.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:12px;font-weight:600;margin-bottom:6px;">已选择 ' + uploadedFiles.length + ' 个文件</div>' +
+    uploadedFiles.map(function(f, i) {
+      return '<div class="file-item"><span>' + (f.type.startsWith('video/') ? '▶' : '▣') + '</span>' +
+        '<span class="file-name">' + f.name + '</span>' +
+        '<span class="text-muted" style="font-size:10px;">' + (f.size < 1048576 ? (f.size/1024).toFixed(1)+'KB' : (f.size/1048576).toFixed(1)+'MB') + '</span>' +
+        '<button class="file-remove" onclick="removeFile(' + i + ')">✕</button></div>';
+    }).join('');
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i, 1);
+  renderFileList();
+}
+
+function startTrial() {
+  var model = document.getElementById('trialModel').value;
+  if (!model) { showToast('请选择模型'); return; }
+  if (uploadedFiles.length === 0) { showToast('请上传测试文件'); return; }
+  if (trialRunning) return;
+  trialRunning = true;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'flex';
+  document.getElementById('btnTrial').disabled = true;
+  document.getElementById('btnTrial').textContent = '检测中...';
+
+  setTimeout(function() {
+    // Summary
+    var totalDetections = uploadedFiles.length * (3 + Math.floor(Math.random() * 6));
+    document.getElementById('summaryBox').innerHTML =
+      '<div><span class="text-muted">模型</span> ' + model + '</div>' +
+      '<div><span class="text-muted">检测文件</span> ' + uploadedFiles.length + ' 个</div>' +
+      '<div><span class="text-muted">检测目标</span> ' + totalDetections + ' 个</div>' +
+      '<div><span class="text-muted">平均置信度</span> ' + (0.7 + Math.random() * 0.2).toFixed(2) + '</div>';
+
+    // Generate mock detection result images
+    var row = document.getElementById('resultGalleryRow');
+    var html = '';
+    var labels = ['police', 'security', 'worker', 'vehicle', 'helmet'];
+    var colors = ['#ff4d4f', '#1890ff', '#52c41a', '#faad14', '#722ed1'];
+
+    for (var i = 0; i < uploadedFiles.length + 2; i++) {
+      var imgName = uploadedFiles[i]
+        ? 'result_' + uploadedFiles[i].name.replace(/\.[^.]+$/, '') + '.jpg'
+        : 'result_sample_' + (i + 1) + '.jpg';
+
+      // Generate random boxes for mock detection
+      var boxes = '';
+      var boxCount = 3 + Math.floor(Math.random() * 5);
+      for (var b = 0; b < boxCount; b++) {
+        var lIdx = Math.floor(Math.random() * labels.length);
+        var bx = 10 + Math.random() * 250;
+        var by = 10 + Math.random() * 180;
+        var bw = 40 + Math.random() * 100;
+        var bh = 40 + Math.random() * 120;
+        var conf = (0.5 + Math.random() * 0.45).toFixed(2);
+        boxes += '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" fill="none" stroke="' + colors[lIdx] + '" stroke-width="2"/>' +
+          '<rect x="' + bx + '" y="' + (by - 14) + '" width="' + (labels[lIdx].length * 9 + 36) + '" height="14" fill="' + colors[lIdx] + '"/>' +
+          '<text x="' + (bx + 4) + '" y="' + (by - 3) + '" font-size="9" fill="#fff">' + labels[lIdx] + ' ' + conf + '</text>';
+      }
+
+      var svg = '<div class="img-card" onclick="openLightbox(this)">' +
+        '<div class="img-card-label">' + imgName + '</div>' +
+        '<svg width="320" height="240" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">' +
+          '<rect width="320" height="240" fill="#87CEEB"/>' +
+          '<rect y="180" width="320" height="60" fill="#8B9A6E"/>' +
+          '<rect y="190" width="320" height="15" fill="#666" opacity="0.3"/>' +
+          boxes +
+          '<text x="195" y="190" font-size="9" fill="#fff">' + imgName + '</text>' +
+          '<text x="8" y="12" font-size="9" fill="#fff" stroke="#333" stroke-width="0.5">' + boxCount + ' detections</text>' +
+        '</svg></div>';
+      html += svg;
+    }
+    row.innerHTML = html;
+
+    document.getElementById('btnTrial').disabled = false;
+    document.getElementById('btnTrial').textContent = '重新试用';
+    trialRunning = false;
+    showToast('检测完成！共检测到 ' + totalDetections + ' 个目标');
+  }, 2000);
+}
+
+function openLightbox(el) {
+  var existing = document.querySelector('.lightbox');
+  if (existing) existing.remove();
+
+  var svg = el.querySelector('svg');
+  var name = (el.querySelector('.img-card-label') || {}).textContent || 'result';
+  var clone = svg.cloneNode(true);
+  clone.setAttribute('width', '800');
+  clone.setAttribute('height', '600');
+  clone.setAttribute('viewBox', '0 0 320 240');
+
+  var lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.onclick = function(e) { if (e.target === lb) lb.remove(); };
+
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;';
+  wrapper.appendChild(clone);
+
+  lb.innerHTML =
+    '<span class="lightbox-close" onclick="this.parentElement.remove()">✕</span>' +
+    '<span class="lightbox-name">' + name + '</span>';
+  lb.appendChild(wrapper);
+  lb.innerHTML += '<div class="lightbox-download"><button class="btn btn-primary" onclick="showToast(\'图片已下载\')">下载</button></div>';
+  document.body.appendChild(lb);
+}
+
+(function() {
+  var user = getUser();
+  if (!user) { location.href = 'login.html'; return; }
+  document.getElementById('headerUserName').textContent = user.name;
+  document.getElementById('headerUserAvatar').textContent = user.avatar || user.name.charAt(0);
+
+  var project = localStorage.getItem('current_project'); if (!project) { location.href = 'projects.html'; return; } document.getElementById("sidebarProjectGroup").style.display = "block"; document.getElementById("sidebarSubPages").style.display = "block"; document.getElementById("sidebarHomeLink").href = (project.indexOf("my_") === 0) ? "my_projects.html" : "projects.html";
+  document.getElementById('sidebarProjectName').textContent = '当前算法：' + getProjectName(project);
+})();
+</script>
+</body>
+</html>
